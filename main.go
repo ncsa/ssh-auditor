@@ -13,7 +13,7 @@ func discoverHosts(cfg ScanConfiguration) (chan string, error) {
 	if err != nil {
 		return hostChan, err
 	}
-	log.Printf("Disocovering %d potential hosts", len(hosts))
+	log.Printf("Discovering %d potential hosts", len(hosts))
 	go func() {
 		for _, h := range hosts {
 			hostChan <- h + ":22"
@@ -38,13 +38,55 @@ func checkStore(store *SQLiteStore, hosts chan SSHHost) chan SSHHost {
 				if err != nil {
 					log.Fatal(err)
 				}
-				log.Print("New host", host)
 				newHosts <- host
 			}
 		}
 		close(newHosts)
 	}()
 	return newHosts
+}
+
+func discover(store *SQLiteStore, cfg ScanConfiguration) {
+	//Push all candidate hosts into the banner fetcher queue
+	hostChan, err := discoverHosts(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	portResults := bannerFetcher(128, hostChan)
+	keyResults := fingerPrintFetcher(128, portResults)
+
+	newHosts := checkStore(store, keyResults)
+
+	for host := range newHosts {
+		log.Print("New host", host)
+	}
+	queued, err := store.initHostCreds()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("queued %d credential checks", queued)
+}
+
+func brute(store *SQLiteStore) {
+	sc, err := store.getScanQueue()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bruteChan := make(chan ScanRequest, 100)
+	go func() {
+		for _, sr := range sc {
+			bruteChan <- sr
+		}
+		close(bruteChan)
+	}()
+
+	bruteResults := bruteForcer(128, bruteChan)
+
+	for br := range bruteResults {
+		store.updateBruteResult(br)
+	}
 }
 
 func main() {
@@ -63,23 +105,7 @@ func main() {
 		exclude: []string{"192.168.2.0/30"},
 	}
 
-	//Push all candidate hosts into the banner fetcher queue
-	hostChan, err := discoverHosts(scanConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	portResults := bannerFetcher(128, hostChan)
-	keyResults := fingerPrintFetcher(128, portResults)
-
-	newHosts := checkStore(store, keyResults)
-
-	bruteResults := bruteForcer(128, newHosts)
-
-	for br := range bruteResults {
-		if br.success {
-			log.Printf("%v", br)
-		}
-	}
+	discover(store, scanConfig)
+	brute(store)
 
 }
