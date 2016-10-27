@@ -1,6 +1,9 @@
 package main
 
-import "log"
+import (
+	"log"
+	"os"
+)
 
 type ScanConfiguration struct {
 	include []string
@@ -105,7 +108,12 @@ func main() {
 		exclude: []string{"192.168.2.0/30"},
 	}
 
-	discover(store, scanConfig)
-	brute(store)
-
+	for _, arg := range os.Args {
+		switch arg {
+		case "discover":
+			discover(store, scanConfig)
+		case "brute":
+			brute(store)
+		}
+	}
 }
