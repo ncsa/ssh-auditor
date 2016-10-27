@@ -16,7 +16,7 @@ func hashKey(key ssh.PublicKey) string {
 	return fp
 }
 
-func FetchSSHKeyFingerPrint(hostport string) string {
+func FetchSSHKeyFingerprint(hostport string) string {
 
 	var keyFingerprint string
 

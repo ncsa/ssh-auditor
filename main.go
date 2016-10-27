@@ -24,7 +24,7 @@ func FindSSH(hosts []string) []ScanResult {
 	}
 	go func() {
 		for _, host := range hosts {
-			hostport := host + ":2221"
+			hostport := host + ":22"
 			jobs <- hostport
 		}
 		close(jobs)
@@ -36,6 +36,44 @@ func FindSSH(hosts []string) []ScanResult {
 		}
 	}
 	return listeningHosts
+}
+
+type SSHHost struct {
+	hostport string
+	version  string
+	keyfp    string
+}
+
+func keyworker(id int, jobs <-chan ScanResult, results chan<- SSHHost) {
+	for host := range jobs {
+		res := SSHHost{
+			hostport: host.hostport,
+			version:  host.banner,
+			keyfp:    FetchSSHKeyFingerprint(host.hostport),
+		}
+		results <- res
+	}
+}
+
+func FetchSSHKeyFingerprints(hosts []ScanResult) []SSHHost {
+	var sshHosts []SSHHost
+	jobs := make(chan ScanResult, 100)
+	results := make(chan SSHHost, 100)
+
+	for w := 1; w <= 128; w++ {
+		go keyworker(w, jobs, results)
+	}
+	go func() {
+		for _, hostport := range hosts {
+			jobs <- hostport
+		}
+		close(jobs)
+	}()
+	for i := 0; i < len(hosts); i++ {
+		res := <-results
+		sshHosts = append(sshHosts, res)
+	}
+	return sshHosts
 }
 
 func SSHAuthAttempt(host, user, password string) bool {
@@ -79,14 +117,10 @@ func main() {
 	log.Printf("Testing %d hosts", len(hosts))
 	listening := FindSSH(hosts)
 	log.Printf("SSH ON %d hosts", len(listening))
-	for _, h := range listening {
-		fp := FetchSSHKeyFingerPrint(h.hostport)
-		log.Printf("SSH %s %s %s", h.hostport, h.banner, fp)
+	fingerprints := FetchSSHKeyFingerprints(listening)
+	for _, h := range fingerprints {
+		log.Printf("SSH %+v", h)
 		continue
-		res := SSHAuthAttempt(h.hostport, "root", "root")
-		if res {
-			log.Printf("BADPW %s (%s): auth result: %v", h.hostport, h.banner, res)
-		}
 	}
 
 }
