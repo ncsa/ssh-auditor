@@ -1,81 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 )
 
-func inc(ip net.IP) {
-	for j := len(ip) - 1; j >= 0; j-- {
-		ip[j]++
-		if ip[j] > 0 {
-			break
-		}
-	}
-}
-
-func EnumerateHosts(netblocks []string, exclude []string) ([]string, error) {
-	var hosts []string
-	excludeHosts := make(map[string]bool)
-	for _, netblock := range exclude {
-		ip, ipnet, err := net.ParseCIDR(netblock)
-		if err != nil {
-			return hosts, err
-		}
-
-		for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
-			excludeHosts[ip.String()] = true
-		}
-	}
-
-	for _, netblock := range netblocks {
-		ip, ipnet, err := net.ParseCIDR(netblock)
-		if err != nil {
-			return hosts, err
-		}
-		for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
-			if _, excluded := excludeHosts[ip.String()]; !excluded {
-				hosts = append(hosts, ip.String())
-			}
-		}
-	}
-	return hosts, nil
-}
-
-type ScanResult struct {
-	host    string
-	success bool
-	version string
-}
-
-func CheckSSH(host string) ScanResult {
-	var version string
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", host, 22), 2*time.Second)
-	if err == nil {
-		defer conn.Close()
-		versionBuffer := make([]byte, 256)
-		n, err := conn.Read(versionBuffer)
-		if err == nil {
-			version = string(versionBuffer[:n])
-			version = strings.TrimRight(version, "\r\n")
-		}
-		return ScanResult{
-			host:    host,
-			success: true,
-			version: version,
-		}
-	}
-	return ScanResult{host: host, success: false, version: ""}
-}
-
 func worker(id int, jobs <-chan string, results chan<- ScanResult) {
 	for host := range jobs {
-		results <- CheckSSH(host)
+		results <- ScanPort(host)
 	}
 }
 
@@ -89,7 +24,8 @@ func FindSSH(hosts []string) []ScanResult {
 	}
 	go func() {
 		for _, host := range hosts {
-			jobs <- host
+			hostport := host + ":22"
+			jobs <- hostport
 		}
 		close(jobs)
 	}()
@@ -181,9 +117,9 @@ func main() {
 	for _, h := range listening {
 		//log.Printf("SSH ON %v", h)
 		//DumpSSH(h.host + ":22")
-		res := SSHAuthAttempt(h.host+":22", "root", "root")
+		res := SSHAuthAttempt(h.hostport, "root", "root")
 		if res {
-			log.Printf("XXXXXXXXXXXXX %v: auth result: %v", h, res)
+			log.Printf("BADPW %s (%s): auth result: %v", h.hostport, h.banner, res)
 		}
 	}
 
