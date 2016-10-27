@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"log"
 	"net"
 	"time"
@@ -40,43 +38,6 @@ func FindSSH(hosts []string) []ScanResult {
 	return listeningHosts
 }
 
-func DumpHostkey(hostname string, remote net.Addr, key ssh.PublicKey) error {
-	hash := sha256.Sum256(key.Marshal())
-	fp := base64.RawStdEncoding.EncodeToString(hash[:])
-	log.Printf("%s %s", remote, fp)
-	return nil
-}
-
-func DumpSSH(host string) {
-	config := &ssh.ClientConfig{
-		User: "security",
-		Auth: []ssh.AuthMethod{
-			ssh.Password("security"),
-		},
-		HostKeyCallback: DumpHostkey,
-		Timeout:         2 * time.Second,
-	}
-
-	conn, err := net.DialTimeout("tcp", host, config.Timeout)
-	if err != nil {
-		log.Print("Failed to dial: ", err)
-		return
-	}
-	c, chans, reqs, err := ssh.NewClientConn(conn, host, config)
-	if err != nil {
-		log.Print("Failed to dial: ", err)
-		return
-	}
-	client := ssh.NewClient(c, chans, reqs)
-	session, err := client.NewSession()
-	if err != nil {
-		log.Print("Failed to create session: ", err)
-		return
-	}
-	defer session.Close()
-
-}
-
 func SSHAuthAttempt(host, user, password string) bool {
 	config := &ssh.ClientConfig{
 		User: user,
@@ -107,7 +68,7 @@ func SSHAuthAttempt(host, user, password string) bool {
 }
 
 func main() {
-	netblocks := []string{"192.168.2.230/28"}
+	netblocks := []string{"192.168.2.0/24"}
 	exclude := []string{"192.168.2.0/30"}
 
 	hosts, err := EnumerateHosts(netblocks, exclude)
@@ -119,7 +80,9 @@ func main() {
 	listening := FindSSH(hosts)
 	log.Printf("SSH ON %d hosts", len(listening))
 	for _, h := range listening {
-		DumpSSH(h.hostport)
+		fp := FetchSSHKeyFingerPrint(h.hostport)
+		log.Printf("SSH %s %s %s", h.hostport, h.banner, fp)
+		continue
 		res := SSHAuthAttempt(h.hostport, "root", "root")
 		if res {
 			log.Printf("BADPW %s (%s): auth result: %v", h.hostport, h.banner, res)
