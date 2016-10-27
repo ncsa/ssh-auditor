@@ -176,7 +176,7 @@ func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 
 	requestMap := make(map[string]*ScanRequest)
 	var requests []ScanRequest
-	q := `select * from host_creds where last_tested < datetime('now', '-1 day') order by last_tested ASC limit 100`
+	q := `select * from host_creds where last_tested < datetime('now', '-14 day') order by last_tested ASC limit 1000`
 	credentials := []HostCredential{}
 	err := s.conn.Select(&credentials, q)
 	if err != nil {
