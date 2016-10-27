@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -37,7 +36,6 @@ func bannerWorker(id int, jobs <-chan string, results chan<- ScanResult) {
 	for host := range jobs {
 		results <- ScanPort(host)
 	}
-	log.Printf("Worker is done!")
 }
 
 func bannerFetcher(numWorkers int, hostports <-chan string) chan ScanResult {

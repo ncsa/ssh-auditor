@@ -43,3 +43,22 @@ func FetchSSHKeyFingerprint(hostport string) string {
 	}
 	return keyFingerprint
 }
+
+func SSHAuthAttempt(hostport, user, password string) bool {
+	config := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password),
+		},
+		Timeout: 2 * time.Second,
+	}
+	client, err := ssh.Dial("tcp", hostport, config)
+	if err == nil {
+		//Found a weak password!
+		client.Close()
+		log.Printf("BADPW %s (%s): user=security password=security", hostport)
+		return true
+	}
+	return false
+
+}

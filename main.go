@@ -1,12 +1,6 @@
 package main
 
-import (
-	"log"
-	"net"
-	"time"
-
-	"golang.org/x/crypto/ssh"
-)
+import "log"
 
 type SSHHost struct {
 	hostport string
@@ -46,35 +40,6 @@ func FetchSSHKeyFingerprints(hosts []ScanResult) []SSHHost {
 	return sshHosts
 }
 
-func SSHAuthAttempt(host, user, password string) bool {
-	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-		},
-		Timeout: 2 * time.Second,
-	}
-
-	conn, err := net.DialTimeout("tcp", host, config.Timeout)
-	if err != nil {
-		//log.Print("Failed to dial: ", err)
-		return false
-	}
-	c, chans, reqs, err := ssh.NewClientConn(conn, host, config)
-	if err != nil {
-		//log.Print("Failed to dial: ", err)
-		return false
-	}
-	client := ssh.NewClient(c, chans, reqs)
-	session, err := client.NewSession()
-	if err != nil {
-		//log.Print("Failed to create session: ", err)
-		return false
-	}
-	defer session.Close()
-	return true
-}
-
 func main() {
 	netblocks := []string{"192.168.2.0/24"}
 	exclude := []string{"192.168.2.0/30"}
@@ -85,6 +50,7 @@ func main() {
 	}
 
 	hostChan := make(chan string, 100)
+	//sshHostChan := make(chan string, 100)
 
 	portResults := bannerFetcher(128, hostChan)
 	log.Printf("Testing %d hosts", len(hosts))
