@@ -19,6 +19,7 @@ func main() {
 
 	log.Printf("Testing %d hosts", len(hosts))
 
+	//Push all candidate hosts into the banner fetcher queue
 	go func() {
 		for _, h := range hosts {
 			hostChan <- h + ":22"
@@ -26,6 +27,7 @@ func main() {
 		close(hostChan)
 	}()
 
+	//Consume from open port results and push into fingerprint queue
 	go func() {
 		for res := range portResults {
 			if res.success {
@@ -38,16 +40,5 @@ func main() {
 	for kr := range keyResults {
 		log.Printf("%v", kr)
 	}
-
-	/*
-		listening := FindSSH(hosts)
-		log.Printf("SSH ON %d hosts", len(listening))
-
-		fingerprints := FetchSSHKeyFingerprints(listening)
-		for _, h := range fingerprints {
-			log.Printf("SSH %+v", h)
-			continue
-		}
-	*/
 
 }
