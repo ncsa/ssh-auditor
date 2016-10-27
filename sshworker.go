@@ -10,6 +10,9 @@ type SSHHost struct {
 
 func keyworker(id int, jobs <-chan ScanResult, results chan<- SSHHost) {
 	for host := range jobs {
+		if !host.success {
+			continue
+		}
 		res := SSHHost{
 			hostport: host.hostport,
 			version:  host.banner,
@@ -22,7 +25,7 @@ func keyworker(id int, jobs <-chan ScanResult, results chan<- SSHHost) {
 func fingerPrintFetcher(numWorkers int, scanResults <-chan ScanResult) chan SSHHost {
 	var wg sync.WaitGroup
 
-	results := make(chan SSHHost, 100)
+	results := make(chan SSHHost, 1000)
 
 	for w := 0; w <= numWorkers; w++ {
 		wg.Add(1)

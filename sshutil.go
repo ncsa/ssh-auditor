@@ -56,7 +56,6 @@ func SSHAuthAttempt(hostport, user, password string) bool {
 	if err == nil {
 		//Found a weak password!
 		client.Close()
-		log.Printf("BADPW %s (%s): user=security password=security", hostport)
 		return true
 	}
 	return false

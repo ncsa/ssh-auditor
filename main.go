@@ -2,7 +2,26 @@ package main
 
 import "log"
 
+func discoverHosts(store *SQLiteStore, hosts []string) error {
+	knownHosts, err := store.getKnownHosts()
+	if err != nil {
+		return err
+	}
+	log.Printf("Known hosts=%d", len(knownHosts))
+	return nil
+}
+
 func main() {
+
+	store, err := NewSQLiteStore("ssh_db.sqlite")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = store.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	netblocks := []string{"192.168.2.0/24"}
 	exclude := []string{"192.168.2.0/30"}
 
@@ -11,11 +30,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	hostChan := make(chan string, 100)
-	sshHostChan := make(chan ScanResult, 100)
+	err = discoverHosts(store, hosts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
 
+	hostChan := make(chan string, 100)
 	portResults := bannerFetcher(128, hostChan)
-	keyResults := fingerPrintFetcher(128, sshHostChan)
+
+	return
+	keyResults := fingerPrintFetcher(128, portResults)
+	bruteResults := bruteForcer(128, keyResults)
 
 	log.Printf("Testing %d hosts", len(hosts))
 
@@ -27,18 +53,10 @@ func main() {
 		close(hostChan)
 	}()
 
-	//Consume from open port results and push into fingerprint queue
-	go func() {
-		for res := range portResults {
-			if res.success {
-				sshHostChan <- res
-			}
+	for br := range bruteResults {
+		if br.success {
+			log.Printf("%v", br)
 		}
-		close(sshHostChan)
-	}()
-
-	for kr := range keyResults {
-		log.Printf("%v", kr)
 	}
 
 }
