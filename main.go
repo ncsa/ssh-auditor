@@ -2,44 +2,6 @@ package main
 
 import "log"
 
-type SSHHost struct {
-	hostport string
-	version  string
-	keyfp    string
-}
-
-func keyworker(id int, jobs <-chan ScanResult, results chan<- SSHHost) {
-	for host := range jobs {
-		res := SSHHost{
-			hostport: host.hostport,
-			version:  host.banner,
-			keyfp:    FetchSSHKeyFingerprint(host.hostport),
-		}
-		results <- res
-	}
-}
-
-func FetchSSHKeyFingerprints(hosts []ScanResult) []SSHHost {
-	var sshHosts []SSHHost
-	jobs := make(chan ScanResult, 100)
-	results := make(chan SSHHost, 100)
-
-	for w := 1; w <= 128; w++ {
-		go keyworker(w, jobs, results)
-	}
-	go func() {
-		for _, hostport := range hosts {
-			jobs <- hostport
-		}
-		close(jobs)
-	}()
-	for i := 0; i < len(hosts); i++ {
-		res := <-results
-		sshHosts = append(sshHosts, res)
-	}
-	return sshHosts
-}
-
 func main() {
 	netblocks := []string{"192.168.2.0/24"}
 	exclude := []string{"192.168.2.0/30"}
@@ -50,9 +12,11 @@ func main() {
 	}
 
 	hostChan := make(chan string, 100)
-	//sshHostChan := make(chan string, 100)
+	sshHostChan := make(chan ScanResult, 100)
 
 	portResults := bannerFetcher(128, hostChan)
+	keyResults := fingerPrintFetcher(128, sshHostChan)
+
 	log.Printf("Testing %d hosts", len(hosts))
 
 	go func() {
@@ -62,10 +26,17 @@ func main() {
 		close(hostChan)
 	}()
 
-	for res := range portResults {
-		if res.success {
-			log.Printf("%+v", res)
+	go func() {
+		for res := range portResults {
+			if res.success {
+				sshHostChan <- res
+			}
 		}
+		close(sshHostChan)
+	}()
+
+	for kr := range keyResults {
+		log.Printf("%v", kr)
 	}
 
 	/*
