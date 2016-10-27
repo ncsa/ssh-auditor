@@ -137,6 +137,35 @@ func DumpSSH(host string) {
 
 }
 
+func SSHAuthAttempt(host, user, password string) bool {
+	config := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password),
+		},
+		Timeout: 2 * time.Second,
+	}
+
+	conn, err := net.DialTimeout("tcp", host, config.Timeout)
+	if err != nil {
+		//log.Print("Failed to dial: ", err)
+		return false
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, host, config)
+	if err != nil {
+		//log.Print("Failed to dial: ", err)
+		return false
+	}
+	client := ssh.NewClient(c, chans, reqs)
+	session, err := client.NewSession()
+	if err != nil {
+		//log.Print("Failed to create session: ", err)
+		return false
+	}
+	defer session.Close()
+	return true
+}
+
 func main() {
 	netblocks := []string{"192.168.2.0/24"}
 	exclude := []string{"192.168.2.0/30"}
@@ -150,8 +179,12 @@ func main() {
 	listening := FindSSH(hosts)
 	log.Printf("SSH ON %d hosts", len(listening))
 	for _, h := range listening {
-		log.Printf("SSH ON %v", h)
-		//DumpSSH(h + ":22")
+		//log.Printf("SSH ON %v", h)
+		//DumpSSH(h.host + ":22")
+		res := SSHAuthAttempt(h.host+":22", "root", "root")
+		if res {
+			log.Printf("XXXXXXXXXXXXX %v: auth result: %v", h, res)
+		}
 	}
 
 }
