@@ -72,6 +72,12 @@ func discover(store *SQLiteStore, cfg ScanConfiguration) {
 }
 
 func brute(store *SQLiteStore) {
+	queued, err := store.initHostCreds()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("queued %d credential checks", queued)
+
 	sc, err := store.getScanQueue()
 	if err != nil {
 		log.Fatal(err)
