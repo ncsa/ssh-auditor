@@ -78,7 +78,7 @@ func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
 	if err != nil {
 		return hosts, err
 	}
-	for _, h := range hosts {
+	for _, h := range hostList {
 		hosts[h.Hostport] = h
 	}
 	return hosts, nil
@@ -86,8 +86,9 @@ func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
 
 func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 	res, err := s.conn.Exec(
-		"UPDATE hosts SET version=$1 fingerprint=$2 time_last=datetime('now', 'localtime')",
-		h.version, h.keyfp)
+		`UPDATE hosts SET version=$1,fingerprint=$2,seen_last=datetime('now', 'localtime')
+			WHERE hostport=$3`,
+		h.version, h.keyfp, h.hostport)
 	if err != nil {
 		return err
 	}
@@ -96,8 +97,8 @@ func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 		return err
 	}
 	_, err = s.conn.Exec(
-		`INSERT INTO hosts (hostport, version, fingerprint, time_first, time_last) VALUES
-			($1, $2, $3, datetime('now', 'localtime'), datetime('now', 'localtime')`,
+		`INSERT INTO hosts (hostport, version, fingerprint, seen_first, seen_last) VALUES
+			($1, $2, $3, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
 		h.hostport, h.version, h.keyfp)
 	return err
 }

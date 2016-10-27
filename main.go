@@ -2,13 +2,49 @@ package main
 
 import "log"
 
-func discoverHosts(store *SQLiteStore, hosts []string) error {
+type ScanConfiguration struct {
+	include []string
+	exclude []string
+}
+
+func discoverHosts(cfg ScanConfiguration) (chan string, error) {
+	hostChan := make(chan string, 100)
+	hosts, err := EnumerateHosts(cfg.include, cfg.exclude)
+	if err != nil {
+		return hostChan, err
+	}
+	log.Printf("Disocovering %d potential hosts", len(hosts))
+	go func() {
+		for _, h := range hosts {
+			hostChan <- h + ":22"
+		}
+		close(hostChan)
+	}()
+	return hostChan, err
+}
+
+func checkStore(store *SQLiteStore, hosts chan SSHHost) chan SSHHost {
 	knownHosts, err := store.getKnownHosts()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	log.Printf("Known hosts=%d", len(knownHosts))
-	return nil
+	log.Printf("Known host count=%d", len(knownHosts))
+	newHosts := make(chan SSHHost, 1000)
+	go func() {
+		for host := range hosts {
+			rec, existing := knownHosts[host.hostport]
+			if !existing || rec.Fingerprint != host.keyfp || rec.Version != host.version {
+				err = store.addOrUpdateHost(host)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Print("New host", host)
+				newHosts <- host
+			}
+		}
+		close(newHosts)
+	}()
+	return newHosts
 }
 
 func main() {
@@ -22,36 +58,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	netblocks := []string{"192.168.2.0/24"}
-	exclude := []string{"192.168.2.0/30"}
-
-	hosts, err := EnumerateHosts(netblocks, exclude)
-	if err != nil {
-		log.Fatal(err)
+	scanConfig := ScanConfiguration{
+		include: []string{"192.168.2.0/24"},
+		exclude: []string{"192.168.2.0/30"},
 	}
-
-	err = discoverHosts(store, hosts)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return
-
-	hostChan := make(chan string, 100)
-	portResults := bannerFetcher(128, hostChan)
-
-	return
-	keyResults := fingerPrintFetcher(128, portResults)
-	bruteResults := bruteForcer(128, keyResults)
-
-	log.Printf("Testing %d hosts", len(hosts))
 
 	//Push all candidate hosts into the banner fetcher queue
-	go func() {
-		for _, h := range hosts {
-			hostChan <- h + ":22"
-		}
-		close(hostChan)
-	}()
+	hostChan, err := discoverHosts(scanConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	portResults := bannerFetcher(128, hostChan)
+	keyResults := fingerPrintFetcher(128, portResults)
+
+	newHosts := checkStore(store, keyResults)
+
+	bruteResults := bruteForcer(128, newHosts)
 
 	for br := range bruteResults {
 		if br.success {
