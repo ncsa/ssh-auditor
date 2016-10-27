@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"log"
 	"net"
 	"time"
@@ -24,7 +26,7 @@ func FindSSH(hosts []string) []ScanResult {
 	}
 	go func() {
 		for _, host := range hosts {
-			hostport := host + ":22"
+			hostport := host + ":2221"
 			jobs <- hostport
 		}
 		close(jobs)
@@ -39,7 +41,9 @@ func FindSSH(hosts []string) []ScanResult {
 }
 
 func DumpHostkey(hostname string, remote net.Addr, key ssh.PublicKey) error {
-	log.Println(hostname, remote, key.Marshal())
+	hash := sha256.Sum256(key.Marshal())
+	fp := base64.RawStdEncoding.EncodeToString(hash[:])
+	log.Printf("%s %s", remote, fp)
 	return nil
 }
 
@@ -103,7 +107,7 @@ func SSHAuthAttempt(host, user, password string) bool {
 }
 
 func main() {
-	netblocks := []string{"192.168.2.0/24"}
+	netblocks := []string{"192.168.2.230/28"}
 	exclude := []string{"192.168.2.0/30"}
 
 	hosts, err := EnumerateHosts(netblocks, exclude)
@@ -115,8 +119,7 @@ func main() {
 	listening := FindSSH(hosts)
 	log.Printf("SSH ON %d hosts", len(listening))
 	for _, h := range listening {
-		//log.Printf("SSH ON %v", h)
-		//DumpSSH(h.host + ":22")
+		DumpSSH(h.hostport)
 		res := SSHAuthAttempt(h.hostport, "root", "root")
 		if res {
 			log.Printf("BADPW %s (%s): auth result: %v", h.hostport, h.banner, res)
