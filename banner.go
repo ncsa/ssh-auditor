@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -29,4 +31,32 @@ func ScanPort(hostport string) ScanResult {
 	res.success = true
 	res.banner = banner
 	return res
+}
+
+func bannerWorker(id int, jobs <-chan string, results chan<- ScanResult) {
+	for host := range jobs {
+		results <- ScanPort(host)
+	}
+	log.Printf("Worker is done!")
+}
+
+func bannerFetcher(numWorkers int, hostports <-chan string) chan ScanResult {
+	var wg sync.WaitGroup
+
+	results := make(chan ScanResult, 100)
+
+	for w := 0; w <= numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			bannerWorker(w, hostports, results)
+			wg.Done()
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	return results
 }

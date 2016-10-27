@@ -8,36 +8,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func worker(id int, jobs <-chan string, results chan<- ScanResult) {
-	for host := range jobs {
-		results <- ScanPort(host)
-	}
-}
-
-func FindSSH(hosts []string) []ScanResult {
-	var listeningHosts []ScanResult
-	jobs := make(chan string, 100)
-	results := make(chan ScanResult, 100)
-
-	for w := 1; w <= 128; w++ {
-		go worker(w, jobs, results)
-	}
-	go func() {
-		for _, host := range hosts {
-			hostport := host + ":22"
-			jobs <- hostport
-		}
-		close(jobs)
-	}()
-	for i := 0; i < len(hosts); i++ {
-		res := <-results
-		if res.success {
-			listeningHosts = append(listeningHosts, res)
-		}
-	}
-	return listeningHosts
-}
-
 type SSHHost struct {
 	hostport string
 	version  string
@@ -114,13 +84,33 @@ func main() {
 		log.Fatal(err)
 	}
 
+	hostChan := make(chan string, 100)
+
+	portResults := bannerFetcher(128, hostChan)
 	log.Printf("Testing %d hosts", len(hosts))
-	listening := FindSSH(hosts)
-	log.Printf("SSH ON %d hosts", len(listening))
-	fingerprints := FetchSSHKeyFingerprints(listening)
-	for _, h := range fingerprints {
-		log.Printf("SSH %+v", h)
-		continue
+
+	go func() {
+		for _, h := range hosts {
+			hostChan <- h + ":22"
+		}
+		close(hostChan)
+	}()
+
+	for res := range portResults {
+		if res.success {
+			log.Printf("%+v", res)
+		}
 	}
+
+	/*
+		listening := FindSSH(hosts)
+		log.Printf("SSH ON %d hosts", len(listening))
+
+		fingerprints := FetchSSHKeyFingerprints(listening)
+		for _, h := range fingerprints {
+			log.Printf("SSH %+v", h)
+			continue
+		}
+	*/
 
 }
