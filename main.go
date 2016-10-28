@@ -116,19 +116,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	scanConfig := ScanConfiguration{
-		include: []string{"192.168.2.0/24"},
-		exclude: []string{"192.168.2.0/30"},
-	}
-
-	for _, arg := range os.Args {
-		switch arg {
-		case "discover":
-			discover(store, scanConfig)
-		case "scan":
-			brute(store, "scan")
-		case "rescan":
-			brute(store, "rescan")
+	switch os.Args[1] {
+	case "discover":
+		scanConfig := ScanConfiguration{
+			include: os.Args[2:],
+			exclude: []string{},
 		}
+		log.Print(scanConfig)
+
+		discover(store, scanConfig)
+	case "scan":
+		brute(store, "scan")
+	case "rescan":
+		brute(store, "rescan")
 	}
 }
