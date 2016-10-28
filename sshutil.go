@@ -16,6 +16,21 @@ func hashKey(key ssh.PublicKey) string {
 	return fp
 }
 
+func DialWithDeadline(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	conn, err := net.DialTimeout(network, addr, config.Timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	//This call to SetDeadline is the only difference from ssh.Dial
+	conn.SetDeadline(time.Now().Add(2 * config.Timeout))
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err != nil {
+		return nil, err
+	}
+	return ssh.NewClient(c, chans, reqs), nil
+}
+
 func FetchSSHKeyFingerprint(hostport string) string {
 
 	var keyFingerprint string
@@ -32,10 +47,10 @@ func FetchSSHKeyFingerprint(hostport string) string {
 			ssh.Password("security"),
 		},
 		HostKeyCallback: DumpHostkey,
-		Timeout:         2 * time.Second,
+		Timeout:         4 * time.Second,
 	}
 
-	client, err := ssh.Dial("tcp", hostport, config)
+	client, err := DialWithDeadline("tcp", hostport, config)
 	if err == nil {
 		//This was supposed to fail
 		client.Close()
@@ -50,9 +65,9 @@ func SSHAuthAttempt(hostport, user, password string) bool {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
-		Timeout: 2 * time.Second,
+		Timeout: 4 * time.Second,
 	}
-	client, err := ssh.Dial("tcp", hostport, config)
+	client, err := DialWithDeadline("tcp", hostport, config)
 	if err == nil {
 		//Found a weak password!
 		client.Close()
