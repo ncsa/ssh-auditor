@@ -36,9 +36,7 @@ func checkStore(store *SQLiteStore, hosts chan SSHHost) chan SSHHost {
 	go func() {
 		for host := range hosts {
 			rec, existing := knownHosts[host.hostport]
-			if !existing ||
-				(host.keyfp != "" && rec.Fingerprint != host.keyfp) ||
-				(host.version != "" && rec.Version != host.version) {
+			if !existing || rec.Fingerprint != host.keyfp || rec.Version != host.version {
 				err = store.addOrUpdateHost(host)
 				if err != nil {
 					log.Fatal(err)
