@@ -11,7 +11,7 @@ type ScanConfiguration struct {
 }
 
 func discoverHosts(cfg ScanConfiguration) (chan string, error) {
-	hostChan := make(chan string, 100)
+	hostChan := make(chan string, 1024)
 	hosts, err := EnumerateHosts(cfg.include, cfg.exclude)
 	if err != nil {
 		return hostChan, err
@@ -56,8 +56,8 @@ func discover(store *SQLiteStore, cfg ScanConfiguration) {
 		log.Fatal(err)
 	}
 
-	portResults := bannerFetcher(512, hostChan)
-	keyResults := fingerPrintFetcher(256, portResults)
+	portResults := bannerFetcher(1024, hostChan)
+	keyResults := fingerPrintFetcher(512, portResults)
 
 	newHosts := checkStore(store, keyResults)
 
@@ -90,7 +90,7 @@ func brute(store *SQLiteStore, scantype string) {
 		log.Fatal(err)
 	}
 
-	bruteChan := make(chan ScanRequest, 100)
+	bruteChan := make(chan ScanRequest, 1024)
 	go func() {
 		for _, sr := range sc {
 			bruteChan <- sr
@@ -98,7 +98,7 @@ func brute(store *SQLiteStore, scantype string) {
 		close(bruteChan)
 	}()
 
-	bruteResults := bruteForcer(128, bruteChan)
+	bruteResults := bruteForcer(256, bruteChan)
 
 	for br := range bruteResults {
 		store.updateBruteResult(br)

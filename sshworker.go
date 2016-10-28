@@ -25,7 +25,7 @@ func keyworker(id int, jobs <-chan ScanResult, results chan<- SSHHost) {
 func fingerPrintFetcher(numWorkers int, scanResults <-chan ScanResult) chan SSHHost {
 	var wg sync.WaitGroup
 
-	results := make(chan SSHHost, 1000)
+	results := make(chan SSHHost, 1024)
 
 	for w := 0; w <= numWorkers; w++ {
 		wg.Add(1)

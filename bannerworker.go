@@ -11,7 +11,7 @@ func bannerWorker(id int, jobs <-chan string, results chan<- ScanResult) {
 func bannerFetcher(numWorkers int, hostports <-chan string) chan ScanResult {
 	var wg sync.WaitGroup
 
-	results := make(chan ScanResult, 1000)
+	results := make(chan ScanResult, 1024)
 
 	for w := 0; w <= numWorkers; w++ {
 		wg.Add(1)
