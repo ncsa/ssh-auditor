@@ -56,8 +56,8 @@ func discover(store *SQLiteStore, cfg ScanConfiguration) {
 		log.Fatal(err)
 	}
 
-	portResults := bannerFetcher(128, hostChan)
-	keyResults := fingerPrintFetcher(128, portResults)
+	portResults := bannerFetcher(512, hostChan)
+	keyResults := fingerPrintFetcher(256, portResults)
 
 	newHosts := checkStore(store, keyResults)
 
@@ -71,14 +71,21 @@ func discover(store *SQLiteStore, cfg ScanConfiguration) {
 	log.Printf("queued %d credential checks", queued)
 }
 
-func brute(store *SQLiteStore) {
+func brute(store *SQLiteStore, scantype string) {
+	var err error
 	queued, err := store.initHostCreds()
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("queued %d credential checks", queued)
 
-	sc, err := store.getScanQueue()
+	var sc []ScanRequest
+	switch scantype {
+	case "scan":
+		sc, err = store.getScanQueue()
+	case "rescan":
+		sc, err = store.getRescanQueue()
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -118,8 +125,10 @@ func main() {
 		switch arg {
 		case "discover":
 			discover(store, scanConfig)
-		case "brute":
-			brute(store)
+		case "scan":
+			brute(store, "scan")
+		case "rescan":
+			brute(store, "rescan")
 		}
 	}
 }

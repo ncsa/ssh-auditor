@@ -172,13 +172,12 @@ func (s *SQLiteStore) initHostCredsForHost(creds []Credential, h Host) (int, err
 	return inserted, nil
 }
 
-func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
+func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
 
 	requestMap := make(map[string]*ScanRequest)
 	var requests []ScanRequest
-	q := `select * from host_creds where last_tested < datetime('now', '-14 day') order by last_tested ASC limit 1000`
 	credentials := []HostCredential{}
-	err := s.conn.Select(&credentials, q)
+	err := s.conn.Select(&credentials, query)
 	if err != nil {
 		return requests, err
 	}
@@ -199,6 +198,14 @@ func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 	}
 
 	return requests, nil
+}
+func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
+	q := `select * from host_creds where last_tested < datetime('now', '-14 day') order by last_tested ASC limit 1000`
+	return s.getScanQueueHelper(q)
+}
+func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
+	q := `select * from host_creds where result=1 order by last_tested ASC limit 1000`
+	return s.getScanQueueHelper(q)
 }
 
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
