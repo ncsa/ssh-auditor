@@ -21,6 +21,7 @@ func ScanPort(hostport string) ScanResult {
 	}
 	defer conn.Close()
 	bannerBuffer := make([]byte, 256)
+	conn.SetDeadline(time.Now().Add(4 * time.Second))
 	n, err := conn.Read(bannerBuffer)
 	if err == nil {
 		banner = string(bannerBuffer[:n])
