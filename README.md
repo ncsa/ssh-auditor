@@ -10,6 +10,10 @@
 
     $ make static
 
+### Ensure you can use enough file descriptors
+
+    $ ulimit -n 4096
+
 ### Create initial database and discover ssh servers
 
     $ ./ssh-auditor discover 192.168.1.0/24
