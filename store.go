@@ -236,11 +236,11 @@ func (s *SQLiteStore) duplicateKeyReport() error {
 		if len(hosts) == 1 {
 			continue
 		}
-		fmt.Printf("Key %s in use by %d hosts", fp, len(hosts))
+		fmt.Printf("Key %s in use by %d hosts:\n", fp, len(hosts))
 		for _, h := range hosts {
 			fmt.Printf(" %s\n", h.Hostport)
 		}
-		fmt.Print()
+		fmt.Println()
 	}
 	return nil
 }
