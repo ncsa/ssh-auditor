@@ -57,3 +57,4 @@ every few minutes to perform a constant audit.
  - [ ] possibly daemonize and add an api that bro could hook into to kick off a discover as soon as a new server is detected.
  - [ ] make the store pluggable (mysql, postgresql).
  - [ ] add go implementations for the above sqlite3 commands.
+ - [ ] differentiate between a failed password attempt and a failed connection or timeout.
