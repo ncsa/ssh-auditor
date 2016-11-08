@@ -139,5 +139,7 @@ func main() {
 		brute(store, "scan")
 	case "rescan":
 		brute(store, "rescan")
+	case "dupes":
+		store.duplicateKeyReport()
 	}
 }

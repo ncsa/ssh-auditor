@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -214,4 +215,32 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 		WHERE hostport=$1 AND user=$3 AND password=$4`,
 		br.host.Hostport, br.success, br.cred.User, br.cred.Password)
 	return err
+}
+
+func (s *SQLiteStore) duplicateKeyReport() error {
+	hosts := []Host{}
+
+	err := s.conn.Select(&hosts, "SELECT * FROM hosts")
+
+	if err != nil {
+		return err
+	}
+
+	keyMap := make(map[string][]Host)
+
+	for _, h := range hosts {
+		keyMap[h.Fingerprint] = append(keyMap[h.Fingerprint], h)
+	}
+
+	for fp, hosts := range keyMap {
+		if len(hosts) == 1 {
+			continue
+		}
+		fmt.Printf("Key %s in use by %d hosts", fp, len(hosts))
+		for _, h := range hosts {
+			fmt.Printf(" %s\n", h.Hostport)
+		}
+		fmt.Print()
+	}
+	return nil
 }
