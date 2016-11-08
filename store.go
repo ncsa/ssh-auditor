@@ -201,11 +201,11 @@ func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
 	return requests, nil
 }
 func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
-	q := `select * from host_creds where last_tested < datetime('now', '-14 day') order by last_tested ASC limit 1000`
+	q := `select * from host_creds where last_tested < datetime('now', '-14 day') order by last_tested ASC limit 5000`
 	return s.getScanQueueHelper(q)
 }
 func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
-	q := `select * from host_creds where result=1 order by last_tested ASC limit 1000`
+	q := `select * from host_creds where result=1 order by last_tested ASC limit 5000`
 	return s.getScanQueueHelper(q)
 }
 
