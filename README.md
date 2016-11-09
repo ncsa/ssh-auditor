@@ -20,8 +20,8 @@
 
 ### Add credential pairs to check
 
-    $ sqlite3 ssh_db.sqlite "insert into credentials values ('root', 'root', 1);"
-    $ sqlite3 ssh_db.sqlite "insert into credentials values ('admin', 'admin', 1);"
+    $ sqlite3 ssh_db.sqlite 'insert into credentials values ('root', 'root', 1);'
+    $ sqlite3 ssh_db.sqlite 'insert into credentials values ('admin', 'admin', 1);'
 
 ### try credentials against discovered hosts in a batch of 5000
 
@@ -29,7 +29,7 @@
 
 ### Output a report on what credentials worked
 
-    $ sqlite3 -header -column ssh_db.sqlite 'select * from host_creds where result=1
+    $ sqlite3 -header -column ssh_db.sqlite 'select * from host_creds where result=1'
 
 ### re-check credentials that worked
 
