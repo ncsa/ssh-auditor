@@ -211,9 +211,9 @@ func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
 
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 	log.Printf("Result %s %v %v", br.host.Hostport, br.cred, br.success)
-	_, err := s.conn.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$2
-		WHERE hostport=$1 AND user=$3 AND password=$4`,
-		br.host.Hostport, br.success, br.cred.User, br.cred.Password)
+	_, err := s.conn.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
+		WHERE hostport=$2 AND user=$3 AND password=$4`,
+		br.success, br.host.Hostport, br.cred.User, br.cred.Password)
 	return err
 }
 

@@ -111,7 +111,10 @@ func brute(store *SQLiteStore, scantype string) {
 	bruteResults := bruteForcer(256, bruteChan)
 
 	for br := range bruteResults {
-		store.updateBruteResult(br)
+		err = store.updateBruteResult(br)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
