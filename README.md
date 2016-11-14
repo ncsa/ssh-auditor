@@ -51,7 +51,7 @@ every few minutes to perform a constant audit.
 ## TODO
 
  - [ ] update the 'host changes' table
- - [ ] handle false positives from devices that don't use ssh password authentication but instead use the shell to do it.
+ - [x] handle false positives from devices that don't use ssh password authentication but instead use the shell to do it.
  - [ ] variable re-check times - right now it's hardcoded as a full re-scan every 14 days.
  - [ ] better support non-standard ports - discover is the only thing that needs to be updated, the rest doesn't care.
  - [ ] possibly daemonize and add an api that bro could hook into to kick off a discover as soon as a new server is detected.
