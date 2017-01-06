@@ -71,7 +71,7 @@ type HostCredential struct {
 
 type SQLiteStore struct {
 	conn    *sqlx.DB
-	tx      *sql.Tx
+	tx      *sqlx.Tx
 	txDepth int
 }
 
@@ -92,14 +92,14 @@ func (s *SQLiteStore) Init() error {
 	return err
 }
 
-func (s *SQLiteStore) Begin() (*sql.Tx, error) {
+func (s *SQLiteStore) Begin() (*sqlx.Tx, error) {
 	if s.tx != nil {
 		s.txDepth += 1
 		//log.Printf("Returning existing transaction: depth=%d\n", s.txDepth)
 		return s.tx, nil
 	}
 	//log.Printf("new transaction\n")
-	tx, err := s.conn.Begin()
+	tx, err := s.conn.Beginx()
 	if err != nil {
 		return tx, err
 	}
@@ -131,13 +131,21 @@ func (s *SQLiteStore) Exec(query string, args ...interface{}) (sql.Result, error
 	}
 	return tx.Exec(query, args...)
 }
+func (s *SQLiteStore) Select(dest interface{}, query string, args ...interface{}) error {
+	tx, err := s.Begin()
+	defer s.Commit()
+	if err != nil {
+		return err
+	}
+	return tx.Select(dest, query, args...)
+}
 
 func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
 	hostList := []Host{}
 
 	hosts := make(map[string]Host)
 
-	err := s.conn.Select(&hostList, "SELECT * FROM hosts")
+	err := s.Select(&hostList, "SELECT * FROM hosts")
 	if err != nil {
 		return hosts, err
 	}
@@ -177,7 +185,7 @@ func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 
 func (s *SQLiteStore) getAllCreds() ([]Credential, error) {
 	credentials := []Credential{}
-	err := s.conn.Select(&credentials, "SELECT * from credentials")
+	err := s.Select(&credentials, "SELECT * from credentials")
 	return credentials, err
 }
 
@@ -226,7 +234,7 @@ func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
 	requestMap := make(map[string]*ScanRequest)
 	var requests []ScanRequest
 	credentials := []HostCredential{}
-	err := s.conn.Select(&credentials, query)
+	err := s.Select(&credentials, query)
 	if err != nil {
 		return requests, err
 	}
@@ -268,7 +276,7 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 func (s *SQLiteStore) duplicateKeyReport() error {
 	hosts := []Host{}
 
-	err := s.conn.Select(&hosts, "SELECT * FROM hosts")
+	err := s.Select(&hosts, "SELECT * FROM hosts")
 
 	if err != nil {
 		return err
