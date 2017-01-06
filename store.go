@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 
@@ -68,7 +70,9 @@ type HostCredential struct {
 }
 
 type SQLiteStore struct {
-	conn *sqlx.DB
+	conn    *sqlx.DB
+	tx      *sql.Tx
+	txDepth int
 }
 
 func NewSQLiteStore(uri string) (*SQLiteStore, error) {
@@ -88,6 +92,46 @@ func (s *SQLiteStore) Init() error {
 	return err
 }
 
+func (s *SQLiteStore) Begin() (*sql.Tx, error) {
+	if s.tx != nil {
+		s.txDepth += 1
+		//log.Printf("Returning existing transaction: depth=%d\n", s.txDepth)
+		return s.tx, nil
+	}
+	//log.Printf("new transaction\n")
+	tx, err := s.conn.Begin()
+	if err != nil {
+		return tx, err
+	}
+	s.tx = tx
+	s.txDepth += 1
+	return s.tx, nil
+}
+
+func (s *SQLiteStore) Commit() error {
+	if s.tx == nil {
+		return errors.New("Commit outside of transaction")
+	}
+	s.txDepth -= 1
+	if s.txDepth > 0 {
+		//log.Printf("Not commiting stacked transaction: depth=%d\n", s.txDepth)
+		return nil // No OP
+	}
+	//log.Printf("Commiting transaction: depth=%d\n", s.txDepth)
+	err := s.tx.Commit()
+	s.tx = nil
+	return err
+}
+
+func (s *SQLiteStore) Exec(query string, args ...interface{}) (sql.Result, error) {
+	tx, err := s.Begin()
+	defer s.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return tx.Exec(query, args...)
+}
+
 func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
 	hostList := []Host{}
 
@@ -104,7 +148,7 @@ func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
 }
 
 func (s *SQLiteStore) resetHostCreds(h SSHHost) error {
-	_, err := s.conn.Exec("UPDATE host_creds set last_tested=0 where hostport=$1", h.hostport)
+	_, err := s.Exec("UPDATE host_creds set last_tested=0 where hostport=$1", h.hostport)
 	return err
 }
 
@@ -113,7 +157,7 @@ func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 	if err != nil {
 		return err
 	}
-	res, err := s.conn.Exec(
+	res, err := s.Exec(
 		`UPDATE hosts SET version=$1,fingerprint=$2,seen_last=datetime('now', 'localtime')
 			WHERE hostport=$3`,
 		h.version, h.keyfp, h.hostport)
@@ -124,7 +168,7 @@ func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 	if rows != 0 {
 		return err
 	}
-	_, err = s.conn.Exec(
+	_, err = s.Exec(
 		`INSERT INTO hosts (hostport, version, fingerprint, seen_first, seen_last) VALUES
 			($1, $2, $3, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
 		h.hostport, h.version, h.keyfp)
@@ -138,6 +182,11 @@ func (s *SQLiteStore) getAllCreds() ([]Credential, error) {
 }
 
 func (s *SQLiteStore) initHostCreds() (int, error) {
+	_, err := s.Begin()
+	defer s.Commit()
+	if err != nil {
+		return 0, err
+	}
 	creds, err := s.getAllCreds()
 	if err != nil {
 		return 0, err
@@ -161,7 +210,7 @@ func (s *SQLiteStore) initHostCreds() (int, error) {
 func (s *SQLiteStore) initHostCredsForHost(creds []Credential, h Host) (int, error) {
 	inserted := 0
 	for _, c := range creds {
-		res, err := s.conn.Exec(`INSERT OR IGNORE INTO host_creds (hostport, user, password, last_tested, result, priority) VALUES
+		res, err := s.Exec(`INSERT OR IGNORE INTO host_creds (hostport, user, password, last_tested, result, priority) VALUES
 			($1, $2, $3, 0, 0, $4)`,
 			h.Hostport, c.User, c.Password, c.Priority)
 		if err != nil {
@@ -174,7 +223,6 @@ func (s *SQLiteStore) initHostCredsForHost(creds []Credential, h Host) (int, err
 }
 
 func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
-
 	requestMap := make(map[string]*ScanRequest)
 	var requests []ScanRequest
 	credentials := []HostCredential{}
@@ -211,7 +259,7 @@ func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
 
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 	log.Printf("Result %s %v %v", br.host.Hostport, br.cred, br.success)
-	_, err := s.conn.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
+	_, err := s.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
 		br.success, br.host.Hostport, br.cred.User, br.cred.Password)
 	return err

@@ -128,6 +128,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	_, err = store.Begin()
+	defer store.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	switch os.Args[1] {
 	case "discover":
