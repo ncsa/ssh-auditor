@@ -10,7 +10,7 @@ static:
 
 .PHONY: rpm
 rpm: build
-rpm: VERSION=0.2
+rpm: VERSION=0.3
 rpm:
 	fpm -f -s dir -t rpm -n ssh-auditor -v $(VERSION) \
 	--iteration=1 \
