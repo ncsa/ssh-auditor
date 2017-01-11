@@ -1,9 +1,18 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
-	"os"
 )
+
+var (
+	port int
+)
+
+func init() {
+	flag.IntVar(&port, "port", 22, "Port to use for discovering ssh servers")
+}
 
 type ScanConfiguration struct {
 	include []string
@@ -19,7 +28,7 @@ func discoverHosts(cfg ScanConfiguration) (chan string, error) {
 	log.Printf("Discovering %d potential hosts", len(hosts))
 	go func() {
 		for _, h := range hosts {
-			hostChan <- h + ":22"
+			hostChan <- fmt.Sprintf("%s:%d", h, port)
 		}
 		close(hostChan)
 	}()
@@ -120,6 +129,7 @@ func brute(store *SQLiteStore, scantype string) {
 
 func main() {
 
+	flag.Parse()
 	store, err := NewSQLiteStore("ssh_db.sqlite")
 	if err != nil {
 		log.Fatal(err)
@@ -134,10 +144,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	switch os.Args[1] {
+	switch flag.Args()[0] {
 	case "discover":
 		scanConfig := ScanConfiguration{
-			include: os.Args[2:],
+			include: flag.Args()[1:],
 			exclude: []string{},
 		}
 		log.Print(scanConfig)
