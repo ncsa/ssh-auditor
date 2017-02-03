@@ -50,7 +50,7 @@ every few minutes to perform a constant audit.
 
 ## TODO
 
- - [ ] update the 'host changes' table
+ - [x] update the 'host changes' table
  - [x] handle false positives from devices that don't use ssh password authentication but instead use the shell to do it.
  - [ ] variable re-check times - right now it's hardcoded as a full re-scan every 14 days.
  - [x] better support non-standard ports - discover is the only thing that needs to be updated, the rest doesn't care.
