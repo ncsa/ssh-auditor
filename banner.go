@@ -25,7 +25,11 @@ func ScanPort(hostport string) ScanResult {
 	n, err := conn.Read(bannerBuffer)
 	if err == nil {
 		banner = string(bannerBuffer[:n])
-		banner = strings.TrimRight(banner, "\r\n")
+
+		newlinePosition := strings.IndexAny(banner, "\r\n")
+		if newlinePosition != -1 {
+			banner = banner[:newlinePosition]
+		}
 	}
 	res.success = true
 	res.banner = banner
