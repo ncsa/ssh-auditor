@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"log"
 	"net"
 	"strings"
@@ -27,12 +25,8 @@ func isFalsePositiveBanner(output string) bool {
 	return false
 }
 
-func hashKey(key ssh.PublicKey) string {
-	hash := sha256.Sum256(key.Marshal())
-	fp := base64.RawStdEncoding.EncodeToString(hash[:])
-	return fp
-}
-
+//DialWithDeadline is identical to ssh.Dial except that it calls SetDeadline on
+//the underlying connection
 func DialWithDeadline(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
 	conn, err := net.DialTimeout(network, addr, config.Timeout)
 	if err != nil {
@@ -53,7 +47,7 @@ func FetchSSHKeyFingerprint(hostport string) string {
 	var keyFingerprint string
 
 	DumpHostkey := func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-		fp := hashKey(key)
+		fp := ssh.FingerprintSHA256(key)
 		keyFingerprint = fp
 		return nil
 	}
