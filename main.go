@@ -62,6 +62,13 @@ func checkStore(store *SQLiteStore, hosts chan SSHHost) chan SSHHost {
 				}
 				newHosts <- host
 			}
+			//If it already existed and we didn't otherwise update it, mark that it was seen
+			if existing {
+				err = store.setLastSeen(host)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
 		}
 		close(newHosts)
 	}()

@@ -190,6 +190,13 @@ func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 	return err
 }
 
+func (s *SQLiteStore) setLastSeen(h SSHHost) error {
+	_, err := s.Exec(
+		"UPDATE hosts SET seen_last=datetime('now', 'localtime') WHERE hostport=$1",
+		h.hostport)
+	return err
+}
+
 func (s *SQLiteStore) getAllCreds() ([]Credential, error) {
 	credentials := []Credential{}
 	err := s.Select(&credentials, "SELECT * from credentials")
