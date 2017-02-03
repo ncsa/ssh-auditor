@@ -2,12 +2,12 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pkg/errors"
 )
 
 const schema = `
@@ -41,8 +41,11 @@ CREATE TABLE IF NOT EXISTS host_creds (
 );
 
 CREATE TABLE IF NOT EXISTS host_changes (
+	time REAL,
 	hostport character varying,
-	message character varying
+	type character varying,
+	old character varying,
+	new character varying
 )
 `
 
@@ -89,7 +92,7 @@ func (s *SQLiteStore) Close() error {
 
 func (s *SQLiteStore) Init() error {
 	_, err := s.conn.Exec(schema)
-	return err
+	return errors.Wrap(err, "Init() failed")
 }
 
 func (s *SQLiteStore) Begin() (*sqlx.Tx, error) {
@@ -194,6 +197,27 @@ func (s *SQLiteStore) setLastSeen(h SSHHost) error {
 	_, err := s.Exec(
 		"UPDATE hosts SET seen_last=datetime('now', 'localtime') WHERE hostport=$1",
 		h.hostport)
+	return err
+}
+
+func (s *SQLiteStore) addHostChange(h SSHHost, changeType, old, new string) error {
+	q := `INSERT INTO host_changes (time, hostport, type, old, new) VALUES
+			(datetime('now', 'localtime'), $1, $2, $3, $4)`
+	_, err := s.Exec(q, h.hostport, changeType, old, new)
+	return errors.Wrap(err, "addHostChanges failed")
+}
+
+func (s *SQLiteStore) addHostChanges(new SSHHost, old Host) error {
+	var err error
+	if old.Fingerprint != new.keyfp {
+		err = s.addHostChange(new, "fingerprint", old.Fingerprint, new.keyfp)
+		if err != nil {
+			return err
+		}
+	}
+	if old.Version != new.version {
+		err = s.addHostChange(new, "version", old.Version, new.version)
+	}
 	return err
 }
 

@@ -54,6 +54,10 @@ func checkStore(store *SQLiteStore, hosts chan SSHHost) chan SSHHost {
 					host.version = rec.Version
 				}
 				needUpdate = (host.keyfp != rec.Fingerprint || host.version != rec.Version)
+				err := store.addHostChanges(host, rec)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 			if !existing || needUpdate {
 				err = store.addOrUpdateHost(host)
@@ -88,7 +92,7 @@ func discover(store *SQLiteStore, cfg ScanConfiguration) {
 	newHosts := checkStore(store, keyResults)
 
 	for host := range newHosts {
-		log.Print("New host", host)
+		log.Print("New or Changed Host", host)
 	}
 	queued, err := store.initHostCreds()
 	if err != nil {
