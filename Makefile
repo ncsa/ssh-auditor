@@ -9,7 +9,7 @@ static:
 	go build --ldflags '-extldflags "-static"'
 
 .PHONY: rpm
-rpm: build
+#rpm: build
 rpm: VERSION=0.4
 rpm:
 	fpm -f -s dir -t rpm -n ssh-auditor -v $(VERSION) \

@@ -144,10 +144,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	switch flag.Args()[0] {
+	cmd := flag.Args()[0]
+	args := flag.Args()[1:]
+
+	switch cmd {
+	case "addcredential":
+		cred := Credential{
+			User:     args[0],
+			Password: args[1],
+		}
+		err := store.AddCredential(cred)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case "discover":
 		scanConfig := ScanConfiguration{
-			include: flag.Args()[1:],
+			include: args,
 			exclude: []string{},
 		}
 		log.Print(scanConfig)
@@ -159,5 +171,7 @@ func main() {
 		brute(store, "rescan")
 	case "dupes":
 		store.duplicateKeyReport()
+	default:
+		log.Fatalf("Unknown command %s", cmd)
 	}
 }

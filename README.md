@@ -20,10 +20,10 @@
 
 ### Add credential pairs to check
 
-    $ sqlite3 ssh_db.sqlite "insert into credentials values ('root', 'root', 1);"
-    $ sqlite3 ssh_db.sqlite "insert into credentials values ('admin', 'admin', 1);"
+    $ ./ssh-auditor addcredential root root
+    $ ./ssh-auditor addcredential admin admin
 
-### try credentials against discovered hosts in a batch of 5000
+### Try credentials against discovered hosts in a batch of 5000
 
     $ ./ssh-auditor scan
 
@@ -31,7 +31,7 @@
 
     $ sqlite3 -header -column ssh_db.sqlite 'select * from host_creds where result=1'
 
-### re-check credentials that worked
+### RE-Check credentials that worked
 
     $ ./ssh-auditor rescan
 

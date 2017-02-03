@@ -140,6 +140,13 @@ func (s *SQLiteStore) Select(dest interface{}, query string, args ...interface{}
 	return tx.Select(dest, query, args...)
 }
 
+func (s *SQLiteStore) AddCredential(c Credential) error {
+	_, err := s.Exec(
+		"INSERT INTO credentials (user, password, priority) VALUES ($1, $2, $3)",
+		c.User, c.Password, c.Priority)
+	return err
+}
+
 func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
 	hostList := []Host{}
 
