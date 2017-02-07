@@ -314,7 +314,7 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 func (s *SQLiteStore) duplicateKeyReport() error {
 	hosts := []Host{}
 
-	err := s.Select(&hosts, "SELECT * FROM hosts")
+	err := s.Select(&hosts, "SELECT * FROM hosts where fingerprint != ''")
 
 	if err != nil {
 		return err
