@@ -257,7 +257,7 @@ func (s *SQLiteStore) initHostCredsForHost(creds []Credential, h Host) (int, err
 	inserted := 0
 	for _, c := range creds {
 		res, err := s.Exec(`INSERT OR IGNORE INTO host_creds (hostport, user, password, last_tested, result, priority) VALUES
-			($1, $2, $3, 0, 0, $4)`,
+			($1, $2, $3, 0, '', $4)`,
 			h.Hostport, c.User, c.Password, c.Priority)
 		if err != nil {
 			return inserted, err
