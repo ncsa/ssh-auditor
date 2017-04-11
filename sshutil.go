@@ -70,27 +70,13 @@ func FetchSSHKeyFingerprint(hostport string) string {
 	return keyFingerprint
 }
 
-func SSHAuthAttempt(hostport, user, password string) bool {
-	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-		},
-		Timeout: 4 * time.Second,
-	}
-	client, err := DialWithDeadline("tcp", hostport, config)
-	if err != nil {
-		return false
-	}
-	//Found a potential weak password!
-	defer client.Close()
+func SSHExecAttempt(client *ssh.Client, hostport string) bool {
 	session, err := client.NewSession()
 	if err != nil {
 		log.Printf("Successful login to %s but failed to open session", hostport)
 		return false
 	}
 	defer session.Close()
-
 	out, err := session.CombinedOutput("id")
 	if err != nil {
 		log.Printf("Successful login to %s but failed to run id", hostport)
@@ -101,4 +87,39 @@ func SSHAuthAttempt(hostport, user, password string) bool {
 		return false
 	}
 	return true
+}
+
+func SSHDialAttempt(client *ssh.Client, dest string) bool {
+	conn, err := client.Dial("tcp", dest)
+	defer conn.Close()
+	//If there was no error, the dial worked and this is vulnerable!
+	return err == nil
+}
+
+func SSHAuthAttempt(hostport, user, password string) string {
+	config := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password),
+		},
+		Timeout: 4 * time.Second,
+	}
+	client, err := DialWithDeadline("tcp", hostport, config)
+	if err != nil {
+		return ""
+	}
+	//Found a potential weak password!
+	defer client.Close()
+
+	execSuccess := SSHExecAttempt(client, hostport)
+	if execSuccess {
+		return "exec"
+	}
+	//If I was able to authenticate but was unable to run a command, see if port forwarding works
+
+	tcpSuccess := SSHDialAttempt(client, hostport)
+	if tcpSuccess {
+		return "tunnel"
+	}
+	return ""
 }

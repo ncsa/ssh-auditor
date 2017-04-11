@@ -8,18 +8,18 @@ type ScanRequest struct {
 }
 
 type BruteForceResult struct {
-	host    Host
-	cred    Credential
-	success bool
+	host   Host
+	cred   Credential
+	result string
 }
 
 func bruteworker(id int, jobs <-chan ScanRequest, results chan<- BruteForceResult) {
 	for sr := range jobs {
 		for _, cred := range sr.credentials {
 			res := BruteForceResult{
-				host:    sr.host,
-				cred:    cred,
-				success: SSHAuthAttempt(sr.host.Hostport, cred.User, cred.Password),
+				host:   sr.host,
+				cred:   cred,
+				result: SSHAuthAttempt(sr.host.Hostport, cred.User, cred.Password),
 			}
 			results <- res
 		}

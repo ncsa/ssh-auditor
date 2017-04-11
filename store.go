@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS host_creds (
 	user character varying,
 	password character varying,
 	last_tested REAL,
-	result boolean,
+	result character varying,
 	priority DEFAULT 0,
 
 	PRIMARY KEY (hostport, user, password)
@@ -68,7 +68,7 @@ type HostCredential struct {
 	User       string
 	Password   string
 	LastTested string `db:"last_tested"`
-	Result     bool
+	Result     string
 	Priority   int
 }
 
@@ -302,15 +302,15 @@ func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 	return s.getScanQueueHelper(q)
 }
 func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
-	q := `select * from host_creds where result=1 order by last_tested ASC limit 5000`
+	q := `select * from host_creds where result !='' order by last_tested ASC limit 5000`
 	return s.getScanQueueHelper(q)
 }
 
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
-	log.Printf("Result %s %v %v", br.host.Hostport, br.cred, br.success)
+	log.Printf("Result %s %v %s", br.host.Hostport, br.cred, br.result)
 	_, err := s.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
-		br.success, br.host.Hostport, br.cred.User, br.cred.Password)
+		br.result, br.host.Hostport, br.cred.User, br.cred.Password)
 	return err
 }
 
