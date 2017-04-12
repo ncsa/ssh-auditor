@@ -138,6 +138,27 @@ func brute(store *SQLiteStore, scantype string) {
 	}
 }
 
+func logcheck(store *SQLiteStore) {
+	sc, err := store.getLogCheckQueue()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bruteChan := make(chan ScanRequest, 1024)
+	go func() {
+		for _, sr := range sc {
+			bruteChan <- sr
+		}
+		close(bruteChan)
+	}()
+
+	bruteResults := bruteForcer(256, bruteChan)
+
+	for br := range bruteResults {
+		log.Printf("Sent logcheck auth request for %s %s", br.host.Hostport, br.cred.User)
+	}
+}
+
 func main() {
 
 	flag.Parse()
@@ -176,6 +197,8 @@ func main() {
 		log.Print(scanConfig)
 
 		discover(store, scanConfig)
+	case "logcheck":
+		logcheck(store)
 	case "scan":
 		brute(store, "scan")
 	case "rescan":

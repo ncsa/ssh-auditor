@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -340,4 +341,39 @@ func (s *SQLiteStore) duplicateKeyReport() error {
 		fmt.Println()
 	}
 	return nil
+}
+
+func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
+	requestMap := make(map[string]*ScanRequest)
+	var requests []ScanRequest
+	hostList := []Host{}
+	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', '-30 day')`
+	err := s.Select(&hostList, query)
+	if err != nil {
+		return requests, err
+	}
+
+	for _, h := range hostList {
+		host, _, err := net.SplitHostPort(h.Hostport)
+		if err != nil {
+			log.Printf("Bad hostport? %s %s", h.Hostport, err)
+			continue
+		}
+		user := fmt.Sprintf("logcheck-%s", host)
+
+		sr := requestMap[h.Hostport]
+		if sr == nil {
+			sr = &ScanRequest{
+				host: Host{Hostport: h.Hostport},
+			}
+		}
+		sr.credentials = append(sr.credentials, Credential{User: user, Password: "logcheck"})
+		requestMap[h.Hostport] = sr
+	}
+
+	for _, sr := range requestMap {
+		requests = append(requests, *sr)
+	}
+
+	return requests, nil
 }
