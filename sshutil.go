@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"strings"
@@ -52,8 +53,14 @@ func FetchSSHKeyFingerprint(hostport string) string {
 		return nil
 	}
 
+	user := "security"
+	host, _, err := net.SplitHostPort(hostport)
+	if err == nil {
+		user = fmt.Sprintf("logcheck-%s", host)
+	}
+
 	config := &ssh.ClientConfig{
-		User: "security",
+		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password("security"),
 		},
