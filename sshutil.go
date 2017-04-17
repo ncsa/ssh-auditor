@@ -109,7 +109,8 @@ func SSHAuthAttempt(hostport, user, password string) string {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
-		Timeout: 4 * time.Second,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         4 * time.Second,
 	}
 	client, err := DialWithDeadline("tcp", hostport, config)
 	if err != nil {
