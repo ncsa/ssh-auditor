@@ -98,7 +98,9 @@ func SSHExecAttempt(client *ssh.Client, hostport string) bool {
 
 func SSHDialAttempt(client *ssh.Client, dest string) bool {
 	conn, err := client.Dial("tcp", dest)
-	defer conn.Close()
+	if err == nil {
+		conn.Close()
+	}
 	//If there was no error, the dial worked and this is vulnerable!
 	return err == nil
 }
