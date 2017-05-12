@@ -151,6 +151,10 @@ func Rescan(store *SQLiteStore) {
 	brute(store, "rescan")
 }
 
+func Dupes(store *SQLiteStore) {
+	store.duplicateKeyReport()
+}
+
 func Logcheck(store *SQLiteStore) {
 	sc, err := store.getLogCheckQueue()
 	if err != nil {
