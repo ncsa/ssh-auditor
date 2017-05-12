@@ -1,4 +1,4 @@
-package main
+package sshauditor
 
 import (
 	"database/sql"
