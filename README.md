@@ -16,7 +16,7 @@
 
 ### Create initial database and discover ssh servers
 
-    $ ./ssh-auditor discover 192.168.1.0/24
+    $ ./ssh-auditor discover -p 22 -p 2222 192.168.1.0/24
 
 ### Add credential pairs to check
 
@@ -29,7 +29,7 @@
 
 ### Output a report on what credentials worked
 
-    $ sqlite3 -header -column ssh_db.sqlite 'select * from host_creds where result=1'
+    $ sqlite3 -header -column ssh_db.sqlite "select * from host_creds where result != ''"
 
 ### RE-Check credentials that worked
 
