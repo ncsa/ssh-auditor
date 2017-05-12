@@ -104,7 +104,9 @@ func Discover(store *SQLiteStore, cfg ScanConfiguration) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("queued %d credential checks", queued)
+	if queued > 0 {
+		log.Printf("queued %d credential checks", queued)
+	}
 }
 
 func brute(store *SQLiteStore, scantype string) {
@@ -113,7 +115,9 @@ func brute(store *SQLiteStore, scantype string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("queued %d credential checks", queued)
+	if queued > 0 {
+		log.Printf("queued %d credential checks", queued)
+	}
 
 	var sc []ScanRequest
 	switch scantype {
@@ -137,9 +141,7 @@ func brute(store *SQLiteStore, scantype string) {
 	bruteResults := bruteForcer(256, bruteChan)
 
 	for br := range bruteResults {
-		if br.result != "" {
-			log.Printf("Result %s %s %s", br.host.Hostport, br.cred, br.result)
-		}
+		log.Printf("Result %s %s %s", br.host.Hostport, br.cred, br.result)
 		if br.err != nil {
 			log.Printf("Result %s %s", br.host.Hostport, br.err)
 		}
