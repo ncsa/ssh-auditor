@@ -10,18 +10,30 @@ type ScanRequest struct {
 type BruteForceResult struct {
 	host   Host
 	cred   Credential
+	err    error
 	result string
 }
 
 func bruteworker(id int, jobs <-chan ScanRequest, results chan<- BruteForceResult) {
 	for sr := range jobs {
+		failures := 0
 		for _, cred := range sr.credentials {
+			//TODO: make this configurable
+			//After 5 connection errors, stop trying this host for this run
+			if failures > 5 {
+				continue
+			}
+			result, err := SSHAuthAttempt(sr.host.Hostport, cred.User, cred.Password)
 			res := BruteForceResult{
 				host:   sr.host,
 				cred:   cred,
-				result: SSHAuthAttempt(sr.host.Hostport, cred.User, cred.Password),
+				result: result,
+				err:    err,
 			}
 			results <- res
+			if err != nil {
+				failures++
+			}
 		}
 	}
 }

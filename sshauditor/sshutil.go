@@ -105,7 +105,7 @@ func SSHDialAttempt(client *ssh.Client, dest string) bool {
 	return err == nil
 }
 
-func SSHAuthAttempt(hostport, user, password string) string {
+func SSHAuthAttempt(hostport, user, password string) (string, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -116,20 +116,24 @@ func SSHAuthAttempt(hostport, user, password string) string {
 	}
 	client, err := DialWithDeadline("tcp", hostport, config)
 	if err != nil {
-		return ""
+		//FIXME: better way?
+		if strings.Contains(err.Error(), "unable to authenticate") {
+			return "", nil
+		}
+		return "", err
 	}
 	//Found a potential weak password!
 	defer client.Close()
 
 	execSuccess := SSHExecAttempt(client, hostport)
 	if execSuccess {
-		return "exec"
+		return "exec", nil
 	}
 	//If I was able to authenticate but was unable to run a command, see if port forwarding works
 
 	tcpSuccess := SSHDialAttempt(client, hostport)
 	if tcpSuccess {
-		return "tunnel"
+		return "tunnel", nil
 	}
-	return ""
+	return "", nil
 }

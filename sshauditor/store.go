@@ -64,6 +64,10 @@ type Credential struct {
 	Priority int
 }
 
+func (c Credential) String() string {
+	return fmt.Sprintf("%s:%s", c.User, c.Password)
+}
+
 type HostCredential struct {
 	Hostport   string
 	User       string
@@ -308,7 +312,6 @@ func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
 }
 
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
-	log.Printf("Result %s %v %s", br.host.Hostport, br.cred, br.result)
 	_, err := s.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
 		br.result, br.host.Hostport, br.cred.User, br.cred.Password)
