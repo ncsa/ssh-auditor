@@ -85,6 +85,23 @@ func checkStore(store *SQLiteStore, hosts chan SSHHost) chan SSHHost {
 	return newHosts
 }
 
+func updateQueues(store *SQLiteStore) {
+	queued, err := store.initHostCreds()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if queued > 0 {
+		log.Printf("queued %d new credential checks", queued)
+	}
+	queuesize, err := store.getScanQueueSize()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if queuesize > 0 {
+		log.Printf("%d total credential checks queued", queuesize)
+	}
+}
+
 func Discover(store *SQLiteStore, cfg ScanConfiguration) {
 	//Push all candidate hosts into the banner fetcher queue
 	hostChan, err := discoverHosts(cfg)
@@ -100,24 +117,12 @@ func Discover(store *SQLiteStore, cfg ScanConfiguration) {
 	for host := range newHosts {
 		log.Print("New or Changed Host", host)
 	}
-	queued, err := store.initHostCreds()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if queued > 0 {
-		log.Printf("queued %d credential checks", queued)
-	}
+	updateQueues(store)
 }
 
 func brute(store *SQLiteStore, scantype string) {
+	updateQueues(store)
 	var err error
-	queued, err := store.initHostCreds()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if queued > 0 {
-		log.Printf("queued %d credential checks", queued)
-	}
 
 	var sc []ScanRequest
 	switch scantype {

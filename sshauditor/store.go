@@ -147,6 +147,14 @@ func (s *SQLiteStore) Select(dest interface{}, query string, args ...interface{}
 	}
 	return tx.Select(dest, query, args...)
 }
+func (s *SQLiteStore) Get(dest interface{}, query string, args ...interface{}) error {
+	tx, err := s.Begin()
+	defer s.Commit()
+	if err != nil {
+		return err
+	}
+	return tx.Get(dest, query, args...)
+}
 
 func (s *SQLiteStore) AddCredential(c Credential) error {
 	_, err := s.Exec(
@@ -306,6 +314,17 @@ func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 		hosts.fingerprint != '' and
 		seen_last > datetime('now', '-14 day') order by last_tested ASC limit 20000`
 	return s.getScanQueueHelper(q)
+}
+func (s *SQLiteStore) getScanQueueSize() (int, error) {
+	q := `select count(*) from host_creds, hosts
+		where hosts.hostport = host_creds.hostport and
+		last_tested < datetime('now', '-14 day') and
+		hosts.fingerprint != '' and
+		seen_last > datetime('now', '-14 day')`
+
+	var cnt int
+	err := s.Get(&cnt, q)
+	return cnt, err
 }
 func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
 	q := `select * from host_creds where result !='' order by last_tested ASC limit 20000`
