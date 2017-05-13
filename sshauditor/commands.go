@@ -200,6 +200,13 @@ func Vulnerabilities(store *SQLiteStore) {
 		log.Fatal(err)
 	}
 	for _, v := range vulns {
-		fmt.Printf("%s\t%s\t%s\t%s\t%s\n", v.Host.Hostport, v.HostCredential.User, v.HostCredential.Password, v.HostCredential.LastTested, v.Host.Version)
+		fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n",
+			v.Host.Hostport,
+			v.HostCredential.User,
+			v.HostCredential.Password,
+			v.HostCredential.Result,
+			v.HostCredential.LastTested,
+			v.Host.Version,
+		)
 	}
 }
