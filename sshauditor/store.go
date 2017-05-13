@@ -85,6 +85,11 @@ type HostCredential struct {
 	ScanInterval int `db:"scan_interval"`
 }
 
+type Vulnerability struct {
+	HostCredential
+	Host
+}
+
 type SQLiteStore struct {
 	conn    *sqlx.DB
 	tx      *sqlx.Tx
@@ -407,4 +412,18 @@ func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
 	}
 
 	return requests, nil
+}
+
+func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
+	creds := []Vulnerability{}
+	q := `select
+			hc.hostport, hc.user, hc.password, hc.result, hc.last_tested, h.version
+		from
+			host_creds hc, hosts h
+		where
+			h.hostport = hc.hostport
+		and result!='' order by last_tested asc`
+
+	err := s.Select(&creds, q)
+	return creds, err
 }

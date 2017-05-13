@@ -193,3 +193,13 @@ func Logcheck(store *SQLiteStore) {
 		//TODO Collect hostports and return them for syslog cross referencing
 	}
 }
+
+func Vulnerabilities(store *SQLiteStore) {
+	vulns, err := store.GetVulnerabilities()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, v := range vulns {
+		fmt.Printf("%s\t%s\t%s\t%s\t%s\n", v.Host.Hostport, v.HostCredential.User, v.HostCredential.Password, v.HostCredential.LastTested, v.Host.Version)
+	}
+}
