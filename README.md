@@ -1,5 +1,7 @@
 # SSH Auditor
 
+[![demo](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv.png)](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv?autoplay=1)
+
 ## Usage
 
 ### Build
