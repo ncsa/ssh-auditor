@@ -21,8 +21,9 @@ var addcredentialCmd = &cobra.Command{
 		}
 		//FIXME: use scanIntervalDays
 		cred := sshauditor.Credential{
-			User:     args[0],
-			Password: args[1],
+			User:         args[0],
+			Password:     args[1],
+			ScanInterval: scanIntervalDays,
 		}
 		err := store.AddCredential(cred)
 		if err != nil {
@@ -32,6 +33,6 @@ var addcredentialCmd = &cobra.Command{
 }
 
 func init() {
-	addcredentialCmd.Flags().IntVar(&scanIntervalDays, "scan-interval", 0, "How often to re-scan for this credential, in days")
+	addcredentialCmd.Flags().IntVar(&scanIntervalDays, "scan-interval", 14, "How often to re-scan for this credential, in days")
 	RootCmd.AddCommand(addcredentialCmd)
 }

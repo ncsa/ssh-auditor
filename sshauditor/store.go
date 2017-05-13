@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS hosts (
 CREATE TABLE IF NOT EXISTS credentials (
 	user character varying,
 	password character varying,
-	priority DEFAULT 0,
+	scan_interval DEFAULT 14,
 
 	PRIMARY KEY (user, password)
 );
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS host_creds (
 	password character varying,
 	last_tested REAL,
 	result character varying,
-	priority DEFAULT 0,
+	scan_interval DEFAULT 0,
 
 	PRIMARY KEY (hostport, user, password)
 );
@@ -47,7 +47,15 @@ CREATE TABLE IF NOT EXISTS host_changes (
 	type character varying,
 	old character varying,
 	new character varying
-)
+);
+
+-- Migrate
+PRAGMA writable_schema=1;
+UPDATE sqlite_master SET SQL=REPLACE(SQL, 'priority', 'scan_interval') WHERE name='host_creds';
+UPDATE sqlite_master SET SQL=REPLACE(SQL, 'priority', 'scan_interval') WHERE name='credentials';
+PRAGMA writable_schema=0;
+UPDATE credentials set scan_interval=14 where scan_interval == 0;
+UPDATE host_creds set scan_interval=14 where scan_interval == 0;
 `
 
 type Host struct {
@@ -59,9 +67,9 @@ type Host struct {
 }
 
 type Credential struct {
-	User     string
-	Password string
-	Priority int
+	User         string
+	Password     string
+	ScanInterval int `db:"scan_interval"`
 }
 
 func (c Credential) String() string {
@@ -69,12 +77,12 @@ func (c Credential) String() string {
 }
 
 type HostCredential struct {
-	Hostport   string
-	User       string
-	Password   string
-	LastTested string `db:"last_tested"`
-	Result     string
-	Priority   int
+	Hostport     string
+	User         string
+	Password     string
+	LastTested   string `db:"last_tested"`
+	Result       string
+	ScanInterval int `db:"scan_interval"`
 }
 
 type SQLiteStore struct {
@@ -158,8 +166,8 @@ func (s *SQLiteStore) Get(dest interface{}, query string, args ...interface{}) e
 
 func (s *SQLiteStore) AddCredential(c Credential) error {
 	_, err := s.Exec(
-		"INSERT INTO credentials (user, password, priority) VALUES ($1, $2, $3)",
-		c.User, c.Password, c.Priority)
+		"INSERT INTO credentials (user, password, scan_interval) VALUES ($1, $2, $3)",
+		c.User, c.Password, c.ScanInterval)
 	return err
 }
 
@@ -269,9 +277,9 @@ func (s *SQLiteStore) initHostCreds() (int, error) {
 func (s *SQLiteStore) initHostCredsForHost(creds []Credential, h Host) (int, error) {
 	inserted := 0
 	for _, c := range creds {
-		res, err := s.Exec(`INSERT OR IGNORE INTO host_creds (hostport, user, password, last_tested, result, priority) VALUES
+		res, err := s.Exec(`INSERT OR IGNORE INTO host_creds (hostport, user, password, last_tested, result, scan_interval) VALUES
 			($1, $2, $3, 0, '', $4)`,
-			h.Hostport, c.User, c.Password, c.Priority)
+			h.Hostport, c.User, c.Password, c.ScanInterval)
 		if err != nil {
 			return inserted, err
 		}
