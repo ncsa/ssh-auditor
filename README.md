@@ -30,7 +30,7 @@
 
 ### Output a report on what credentials worked
 
-    $ sqlite3 -header -column ssh_db.sqlite "select * from host_creds where result != ''"
+    $ ./ssh-auditor vuln
 
 ### RE-Check credentials that worked
 
@@ -62,11 +62,11 @@ every few minutes to perform a constant audit.
  - [ ] possibly daemonize and add an api that bro could hook into to kick off a discover as soon as a new SSH server is detected.
  - [ ] make the store pluggable (mysql, postgresql).
  - [x] differentiate between a failed password attempt and a failed connection or timeout.  Mostly done.  Things like fail2ban complicate this.
- - [ ] add go implementations for the report sqlite3 command.
+ - [x] add go implementations for the report sqlite3 command.
 
-### Report query.
+## Report query.
 
-This seems to be the best report query:
+This query that `ssh-auditor vuln` runs is
 
     select
             hc.hostport, hc.user, hc.password, hc.result, hc.last_tested, h.version
