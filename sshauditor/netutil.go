@@ -11,29 +11,39 @@ func inc(ip net.IP) {
 	}
 }
 
-func EnumerateHosts(netblocks []string, exclude []string) ([]string, error) {
+func ExpandCIDRs(netblocks []string) ([]string, error) {
 	var hosts []string
-	excludeHosts := make(map[string]bool)
-	for _, netblock := range exclude {
-		ip, ipnet, err := net.ParseCIDR(netblock)
-		if err != nil {
-			return hosts, err
-		}
-
-		for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
-			excludeHosts[ip.String()] = true
-		}
-	}
-
 	for _, netblock := range netblocks {
 		ip, ipnet, err := net.ParseCIDR(netblock)
 		if err != nil {
 			return hosts, err
 		}
 		for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
-			if _, excluded := excludeHosts[ip.String()]; !excluded {
-				hosts = append(hosts, ip.String())
-			}
+			hosts = append(hosts, ip.String())
+		}
+	}
+	return hosts, nil
+}
+
+func EnumerateHosts(netblocks []string, exclude []string) ([]string, error) {
+	var hosts []string
+	allHosts, err := ExpandCIDRs(netblocks)
+	if err != nil {
+		return hosts, err
+	}
+
+	allExcludeHosts, err := ExpandCIDRs(exclude)
+	if err != nil {
+		return hosts, err
+	}
+	excludeHosts := make(map[string]bool)
+	for _, ip := range allExcludeHosts {
+		excludeHosts[ip] = true
+	}
+
+	for _, ip := range allHosts {
+		if _, excluded := excludeHosts[ip]; !excluded {
+			hosts = append(hosts, ip)
 		}
 	}
 	return hosts, nil
