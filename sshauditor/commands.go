@@ -185,6 +185,11 @@ func Logcheck(store *SQLiteStore) {
 	bruteResults := bruteForcer(256, bruteChan)
 
 	for br := range bruteResults {
+		if br.err != nil {
+			log.Printf("Failed to send logcheck auth request for %s %s %s", br.host.Hostport, br.cred.User, br.err)
+			continue
+		}
 		log.Printf("Sent logcheck auth request for %s %s", br.host.Hostport, br.cred.User)
+		//TODO Collect hostports and return them for syslog cross referencing
 	}
 }
