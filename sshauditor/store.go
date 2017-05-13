@@ -304,11 +304,11 @@ func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 		where hosts.hostport = host_creds.hostport and
 		last_tested < datetime('now', '-14 day') and
 		hosts.fingerprint != '' and
-		seen_last > datetime('now', '-30 day') order by last_tested ASC limit 5000`
+		seen_last > datetime('now', '-14 day') order by last_tested ASC limit 20000`
 	return s.getScanQueueHelper(q)
 }
 func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
-	q := `select * from host_creds where result !='' order by last_tested ASC limit 5000`
+	q := `select * from host_creds where result !='' order by last_tested ASC limit 20000`
 	return s.getScanQueueHelper(q)
 }
 
