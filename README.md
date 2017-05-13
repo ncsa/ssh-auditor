@@ -22,6 +22,7 @@
 
     $ ./ssh-auditor addcredential root root
     $ ./ssh-auditor addcredential admin admin
+    $ ./ssh-auditor addcredential guest guest --scan-interval 1 #check this once per day
 
 ### Try credentials against discovered hosts in a batch of 5000
 
@@ -46,6 +47,7 @@
 * SSH auditor will do a full credential scan on any host whose ssh version or key fingerprint changes.
 * SSH auditor will check if it can authenticate and run a command.
 * SSH auditor will ALSO check to see if it can authenticate and tunnel a TCP connection.  Many appliances screw this up.
+* SSH auditor will re-check each credential using a per credential scan_interval - default 14 days.
 
 
 It's designed so that you can run `discover` from cron every hour, and `scan`
@@ -55,7 +57,7 @@ every few minutes to perform a constant audit.
 
  - [x] update the 'host changes' table
  - [x] handle false positives from devices that don't use ssh password authentication but instead use the shell to do it.
- - [ ] variable re-check times - right now it's hardcoded as a full re-scan every 14 days.  in progress.
+ - [x] variable re-check times - each credential has a scan_interval in days
  - [x] better support non-standard ports - discover is the only thing that needs to be updated, the rest doesn't care.
  - [ ] possibly daemonize and add an api that bro could hook into to kick off a discover as soon as a new SSH server is detected.
  - [ ] make the store pluggable (mysql, postgresql).

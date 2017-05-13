@@ -318,17 +318,17 @@ func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
 func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 	q := `select host_creds.* from host_creds, hosts
 		where hosts.hostport = host_creds.hostport and
-		last_tested < datetime('now', '-14 day') and
+		last_tested < datetime('now', 'localtime',  -scan_interval || ' day') and
 		hosts.fingerprint != '' and
-		seen_last > datetime('now', '-14 day') order by last_tested ASC limit 20000`
+		seen_last > datetime('now', 'localtime', '-14 day') order by last_tested ASC limit 20000`
 	return s.getScanQueueHelper(q)
 }
 func (s *SQLiteStore) getScanQueueSize() (int, error) {
 	q := `select count(*) from host_creds, hosts
 		where hosts.hostport = host_creds.hostport and
-		last_tested < datetime('now', '-14 day') and
+		last_tested < datetime('now', 'localtime', -scan_interval || ' day') and
 		hosts.fingerprint != '' and
-		seen_last > datetime('now', '-14 day')`
+		seen_last > datetime('now', 'localtime', '-14 day')`
 
 	var cnt int
 	err := s.Get(&cnt, q)
@@ -378,7 +378,7 @@ func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
 	requestMap := make(map[string]*ScanRequest)
 	var requests []ScanRequest
 	hostList := []Host{}
-	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', '-30 day')`
+	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-14 day')`
 	err := s.Select(&hostList, query)
 	if err != nil {
 		return requests, err
