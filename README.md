@@ -2,12 +2,13 @@
 
 ## Features
 
-* SSH auditor will automatically re-check existing hosts as new credentials are added.  It will only try logging in with the new credentials.
-* SSH auditor will do a full credential scan on any new host discovered.
-* SSH auditor will do a full credential scan on any host whose ssh version or key fingerprint changes.
-* SSH auditor will check if it can authenticate and run a command.
-* SSH auditor will ALSO check to see if it can authenticate and tunnel a TCP connection.  Many appliances screw this up.
-* SSH auditor will re-check each credential using a per credential scan_interval - default 14 days.
+ssh-auditor will automatically:
+
+* Re-check all known hosts as new credentials are added.  It will only check the new credentials.
+* Queue a full credential scan on any new host discovered.
+* Queue a full credential scan on any known host whose ssh version or key fingerprint changes.
+* Attempt command execution as well as attempt to tunnel a TCP connection.
+* Re-check each credential using a per credential `scan_interval` - default 14 days.
 
 
 It's designed so that you can run `ssh-auditor discover` + `ssh-auditor scan`
