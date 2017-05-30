@@ -1,7 +1,5 @@
 # SSH Auditor
 
-[![demo](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv.png)](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv?autoplay=1)
-
 ## Features
 
 * SSH auditor will automatically re-check existing hosts as new credentials are added.  It will only try logging in with the new credentials.
@@ -14,6 +12,10 @@
 
 It's designed so that you can run `ssh-auditor discover` + `ssh-auditor scan`
 from cron every hour to to perform a constant audit.
+
+## Demo
+
+[![demo](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv.png)](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv?autoplay=1)
 
 
 ## Usage
