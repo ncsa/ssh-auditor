@@ -4,7 +4,12 @@
 
 ## Usage
 
-### Build
+### Install
+
+    $ brew install go # or however you want to install the go compiler
+    $ go install github.com/ncsa/ssh-auditor
+
+### or Build from a git clone
 
     $ go build
 
