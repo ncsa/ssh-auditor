@@ -2,6 +2,20 @@
 
 [![demo](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv.png)](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv?autoplay=1)
 
+## Features
+
+* SSH auditor will automatically re-check existing hosts as new credentials are added.  It will only try logging in with the new credentials.
+* SSH auditor will do a full credential scan on any new host discovered.
+* SSH auditor will do a full credential scan on any host whose ssh version or key fingerprint changes.
+* SSH auditor will check if it can authenticate and run a command.
+* SSH auditor will ALSO check to see if it can authenticate and tunnel a TCP connection.  Many appliances screw this up.
+* SSH auditor will re-check each credential using a per credential scan_interval - default 14 days.
+
+
+It's designed so that you can run `ssh-auditor discover` + `ssh-auditor scan`
+from cron every hour to to perform a constant audit.
+
+
 ## Usage
 
 ### Install
@@ -31,7 +45,7 @@
     $ ./ssh-auditor addcredential admin admin
     $ ./ssh-auditor addcredential guest guest --scan-interval 1 #check this once per day
 
-### Try credentials against discovered hosts in a batch of 5000
+### Try credentials against discovered hosts in a batch of 20000
 
     $ ./ssh-auditor scan
 
@@ -46,19 +60,6 @@
 ### Output a report on duplicate key usage
 
     $ ./ssh-auditor dupes
-
-## Features
-
-* SSH auditor will automatically re-check existing hosts as new credentials are added.  It will only try logging in with the new credentials.
-* SSH auditor will do a full credential scan on any new host discovered.
-* SSH auditor will do a full credential scan on any host whose ssh version or key fingerprint changes.
-* SSH auditor will check if it can authenticate and run a command.
-* SSH auditor will ALSO check to see if it can authenticate and tunnel a TCP connection.  Many appliances screw this up.
-* SSH auditor will re-check each credential using a per credential scan_interval - default 14 days.
-
-
-It's designed so that you can run `discover` from cron every hour, and `scan`
-every few minutes to perform a constant audit.
 
 ## TODO
 
