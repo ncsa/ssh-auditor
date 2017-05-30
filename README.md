@@ -24,7 +24,7 @@ from cron every hour to to perform a constant audit.
 ### Install
 
     $ brew install go # or however you want to install the go compiler
-    $ go install github.com/ncsa/ssh-auditor
+    $ go get github.com/ncsa/ssh-auditor
 
 ### or Build from a git clone
 
