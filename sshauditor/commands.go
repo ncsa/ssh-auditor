@@ -219,7 +219,7 @@ func LogcheckReport(store *SQLiteStore, ls LogSearcher) {
 			log.Printf("invalid hostport for: %v", host)
 			continue
 		}
-		log.Printf("%s %v", host.Hostport, logPresent[ip])
+		fmt.Printf("%s %v", host.Hostport, logPresent[ip])
 	}
 }
 

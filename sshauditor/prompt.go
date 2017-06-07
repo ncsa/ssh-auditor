@@ -13,12 +13,12 @@ import (
 func promptCredentials() (string, string) {
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print("Enter Username: ")
+	fmt.Fprintf(os.Stderr, "Enter Username: ")
 	username, _ := reader.ReadString('\n')
 
-	fmt.Print("Enter Password: ")
+	fmt.Fprintf(os.Stderr, "Enter Password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-	fmt.Printf("\n")
+	fmt.Fprintf(os.Stderr, "\n")
 	if err != nil {
 		panic(err)
 	}
