@@ -210,8 +210,8 @@ func LogcheckReport(store *SQLiteStore, ls LogSearcher) {
 		logPresent[host] = true
 	}
 
-	//log.Printf("%d active hosts", len(activeHosts))
-	//log.Printf("Found %d IPs in logs", len(foundIPs))
+	log.Printf("Found %d active hosts in store", len(activeHosts))
+	log.Printf("Found %d IPs in logs", len(foundIPs))
 
 	for _, host := range activeHosts {
 		ip, _, err := net.SplitHostPort(host.Hostport)
@@ -219,7 +219,7 @@ func LogcheckReport(store *SQLiteStore, ls LogSearcher) {
 			log.Printf("invalid hostport for: %v", host)
 			continue
 		}
-		fmt.Printf("%s %v", host.Hostport, logPresent[ip])
+		fmt.Printf("%s %v\n", host.Hostport, logPresent[ip])
 	}
 }
 
