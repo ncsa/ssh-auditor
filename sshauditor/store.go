@@ -427,3 +427,10 @@ func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
 	err := s.Select(&creds, q)
 	return creds, err
 }
+
+func (s *SQLiteStore) GetActiveHosts() ([]Host, error) {
+	hostList := []Host{}
+	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-2 day')`
+	err := s.Select(&hostList, query)
+	return hostList, err
+}

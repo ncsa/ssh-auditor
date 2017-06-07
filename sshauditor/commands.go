@@ -3,6 +3,7 @@ package sshauditor
 import (
 	"fmt"
 	"log"
+	"net"
 	"strconv"
 	"strings"
 )
@@ -191,6 +192,34 @@ func Logcheck(store *SQLiteStore) {
 		}
 		log.Printf("Sent logcheck auth request for %s %s", br.host.Hostport, br.cred.User)
 		//TODO Collect hostports and return them for syslog cross referencing
+	}
+}
+func LogcheckReport(store *SQLiteStore, ls LogSearcher) {
+	activeHosts, err := store.GetActiveHosts()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	foundIPs, err := ls.GetIPs()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	logPresent := make(map[string]bool)
+	for _, host := range foundIPs {
+		logPresent[host] = true
+	}
+
+	//log.Printf("%d active hosts", len(activeHosts))
+	//log.Printf("Found %d IPs in logs", len(foundIPs))
+
+	for _, host := range activeHosts {
+		ip, _, err := net.SplitHostPort(host.Hostport)
+		if err != nil {
+			log.Printf("invalid hostport for: %v", host)
+			continue
+		}
+		log.Printf("%s %v", host.Hostport, logPresent[ip])
 	}
 }
 
