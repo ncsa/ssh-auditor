@@ -28,7 +28,7 @@ func discoverHosts(cfg ScanConfiguration) (chan string, error) {
 	if err != nil {
 		return hostChan, err
 	}
-	log.Printf("Discovering %d potential hosts on ports %s", len(hosts), joinInts(cfg.Ports, ","))
+	log.Printf("Discovering %q, ignoring %q (%d potential hosts) on ports %s", cfg.Include, cfg.Exclude, len(hosts), joinInts(cfg.Ports, ","))
 	go func() {
 		// Iterate over ports first, so for a large scan there's a
 		// delay between attempts per host
