@@ -104,16 +104,11 @@ func updateQueues(store *SQLiteStore) error {
 	if err != nil {
 		return err
 	}
-	if queued > 0 {
-		log.Info("queued new credential checks", "count", queued)
-	}
 	queuesize, err := store.getScanQueueSize()
 	if err != nil {
 		return err
 	}
-	if queuesize > 0 {
-		log.Info("total credential checks queued", "count", queuesize)
-	}
+	log.Info("brute force queue size", "new", queued, "total", queuesize)
 	return nil
 }
 
