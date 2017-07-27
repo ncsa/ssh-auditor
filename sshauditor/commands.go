@@ -163,13 +163,12 @@ func brute(store *SQLiteStore, scantype string) error {
 			"password", br.cred.Password,
 			"result", br.result,
 		)
-		if br.result == "" {
+		if br.err != nil {
+			l.Error("brute force error", "err", br.err.Error())
+		} else if br.result == "" {
 			l.Debug("negative brute force result")
 		} else {
 			l.Info("positive brute force result")
-		}
-		if br.err != nil {
-			l.Error("scan failed", "err", br.err.Error())
 		}
 		err = store.updateBruteResult(br)
 		if err != nil {
