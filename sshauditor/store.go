@@ -171,7 +171,13 @@ func (s *SQLiteStore) Get(dest interface{}, query string, args ...interface{}) e
 
 func (s *SQLiteStore) AddCredential(c Credential) error {
 	_, err := s.Exec(
-		"INSERT INTO credentials (user, password, scan_interval) VALUES ($1, $2, $3)",
+		"INSERT OR IGNORE INTO credentials (user, password, scan_interval) VALUES ($1, $2, $3)",
+		c.User, c.Password, c.ScanInterval)
+	if err != nil {
+		return err
+	}
+	_, err = s.Exec(
+		"UPDATE credentials SET scan_interval=$3 WHERE user=$1 AND password=$2",
 		c.User, c.Password, c.ScanInterval)
 	return err
 }
