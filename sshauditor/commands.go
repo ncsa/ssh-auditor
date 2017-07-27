@@ -156,6 +156,7 @@ func brute(store *SQLiteStore, scantype string) error {
 
 	bruteResults := bruteForcer(256, bruteChan)
 
+	var totalCount, errCount, negCount, posCount int
 	for br := range bruteResults {
 		l := log.New(
 			"host", br.host.Hostport,
@@ -165,16 +166,22 @@ func brute(store *SQLiteStore, scantype string) error {
 		)
 		if br.err != nil {
 			l.Error("brute force error", "err", br.err.Error())
+			errCount++
 		} else if br.result == "" {
 			l.Debug("negative brute force result")
+			negCount++
 		} else {
 			l.Info("positive brute force result")
+			posCount++
 		}
 		err = store.updateBruteResult(br)
 		if err != nil {
 			return err
 		}
+		totalCount++
 	}
+	//TODO: return this instead
+	log.Info("brute force scan report", "total", totalCount, "neg", negCount, "pos", posCount, "err", errCount)
 	return nil
 }
 
