@@ -66,6 +66,7 @@ func FetchSSHKeyFingerprint(hostport string) string {
 		},
 		HostKeyCallback: DumpHostkey,
 		Timeout:         4 * time.Second,
+		ClientVersion:   "SSH-2.0-Go-ssh-auditor",
 	}
 
 	client, err := DialWithDeadline("tcp", hostport, config)
@@ -113,6 +114,7 @@ func SSHAuthAttempt(hostport, user, password string) (string, error) {
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         4 * time.Second,
+		ClientVersion:   "SSH-2.0-Go-ssh-auditor",
 	}
 	client, err := DialWithDeadline("tcp", hostport, config)
 	if err != nil {
