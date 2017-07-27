@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/inconshreveable/log15"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -72,7 +72,7 @@ func FetchSSHKeyFingerprint(hostport string) string {
 	if err == nil {
 		//This was supposed to fail
 		client.Close()
-		log.Error("BADPW %s: user=%s password=security worked!?", hostport, user)
+		log.Error("initial probe worked!?!?", "host", hostport, "user", user, "password", "security")
 	}
 	return keyFingerprint
 }
@@ -80,17 +80,17 @@ func FetchSSHKeyFingerprint(hostport string) string {
 func SSHExecAttempt(client *ssh.Client, hostport string) bool {
 	session, err := client.NewSession()
 	if err != nil {
-		log.Printf("Successful login to %s but failed to open session", hostport)
+		log.Error("successful login but failed to open session", "host", hostport)
 		return false
 	}
 	defer session.Close()
 	out, err := session.CombinedOutput("id")
 	if err != nil {
-		log.Printf("Successful login to %s but failed to run id", hostport)
+		log.Error("successful login but failed to run id", "host", hostport)
 		return false
 	}
 	if isFalsePositiveBanner(string(out)) {
-		log.Printf("Successful login to %s but id command output %s", hostport, out)
+		log.Error("successful login but unexpected id command output", "host", hostport, "output", out)
 		return false
 	}
 	return true

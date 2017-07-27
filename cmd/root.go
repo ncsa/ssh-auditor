@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	log "github.com/sirupsen/logrus"
+	"os"
 
+	log "github.com/inconshreveable/log15"
 	"github.com/ncsa/ssh-auditor/sshauditor"
 	"github.com/spf13/cobra"
 )
@@ -11,13 +12,17 @@ var store *sshauditor.SQLiteStore
 var dbPath string
 
 func initStore() error {
+	//This should really return err, but it doesn't look as nice as when I fail immediately
+	//cobra gives the help for the current command, which is irrelevant
 	s, err := sshauditor.NewSQLiteStore(dbPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err.Error())
+		os.Exit(1)
 	}
 	err = s.Init()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err.Error())
+		os.Exit(1)
 	}
 	_, err = s.Begin()
 	store = s

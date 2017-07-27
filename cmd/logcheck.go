@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"os"
+
+	log "github.com/inconshreveable/log15"
 	"github.com/ncsa/ssh-auditor/sshauditor"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +20,11 @@ var logcheckRunCmd = &cobra.Command{
 	Long: `trigger failed ssh authentication attempts in order to verify that
 		local servers are properly shipping logs to a central collector`,
 	Run: func(cmd *cobra.Command, args []string) {
-		sshauditor.Logcheck(store)
+		err := sshauditor.Logcheck(store)
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
@@ -35,9 +41,14 @@ var logcheckReportCmd = &cobra.Command{
 		if splunkHost != "" {
 			ls = sshauditor.NewSplunkLogSearcher(splunkHost)
 		} else {
-			log.Fatal("Only --splunk supported for now")
+			log.Error("only --splunk supported for now")
+			os.Exit(1)
 		}
-		sshauditor.LogcheckReport(store, ls)
+		err := sshauditor.LogcheckReport(store, ls)
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
