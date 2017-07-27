@@ -2,10 +2,12 @@ package sshauditor
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
+
+	log "github.com/inconshreveable/log15"
+	"github.com/pkg/errors"
 )
 
 type ScanConfiguration struct {
@@ -28,7 +30,12 @@ func discoverHosts(cfg ScanConfiguration) (chan string, error) {
 	if err != nil {
 		return hostChan, err
 	}
-	log.Printf("Discovering %q, ignoring %q (%d potential hosts) on ports %s", cfg.Include, cfg.Exclude, len(hosts), joinInts(cfg.Ports, ","))
+	log.Info("discovering hosts",
+		"include", strings.Join(cfg.Include, ","),
+		"exclude", strings.Join(cfg.Exclude, ","),
+		"total", len(hosts),
+		"ports", joinInts(cfg.Ports, ","),
+	)
 	go func() {
 		// Iterate over ports first, so for a large scan there's a
 		// delay between attempts per host
@@ -42,86 +49,89 @@ func discoverHosts(cfg ScanConfiguration) (chan string, error) {
 	return hostChan, err
 }
 
-func checkStore(store *SQLiteStore, hosts chan SSHHost) chan SSHHost {
+func checkStore(store *SQLiteStore, hosts chan SSHHost) error {
 	knownHosts, err := store.getKnownHosts()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	log.Printf("Known host count=%d", len(knownHosts))
-	newHosts := make(chan SSHHost, 1000)
-	go func() {
-		for host := range hosts {
-			var needUpdate bool
-			rec, existing := knownHosts[host.hostport]
-			if existing {
-				if host.keyfp == "" {
-					host.keyfp = rec.Fingerprint
-				}
-				if host.version == "" {
-					host.version = rec.Version
-				}
-				needUpdate = (host.keyfp != rec.Fingerprint || host.version != rec.Version)
-				err := store.addHostChanges(host, rec)
-				if err != nil {
-					log.Fatal(err)
-				}
+	log.Info("current known hosts", "count", len(knownHosts))
+	var totalCount, updatedCount, newCount int
+	for host := range hosts {
+		var needUpdate bool
+		rec, existing := knownHosts[host.hostport]
+		if existing {
+			if host.keyfp == "" {
+				host.keyfp = rec.Fingerprint
 			}
-			if !existing || needUpdate {
-				err = store.addOrUpdateHost(host)
-				if err != nil {
-					log.Fatal(err)
-				}
-				newHosts <- host
+			if host.version == "" {
+				host.version = rec.Version
 			}
-			//If it already existed and we didn't otherwise update it, mark that it was seen
-			if existing {
-				err = store.setLastSeen(host)
-				if err != nil {
-					log.Fatal(err)
-				}
+			needUpdate = (host.keyfp != rec.Fingerprint || host.version != rec.Version)
+			err := store.addHostChanges(host, rec)
+			if err != nil {
+				return errors.Wrap(err, "checkStore")
 			}
 		}
-		close(newHosts)
-	}()
-	return newHosts
+		l := log.New("host", host.hostport, "version", host.version, "fp", host.keyfp)
+		if !existing || needUpdate {
+			err = store.addOrUpdateHost(host)
+			if err != nil {
+				return errors.Wrap(err, "checkStore")
+			}
+		}
+		//If it already existed and we didn't otherwise update it, mark that it was seen
+		if existing {
+			err = store.setLastSeen(host)
+			if err != nil {
+				return errors.Wrap(err, "checkStore")
+			}
+		}
+		totalCount++
+		if !existing {
+			l.Info("discovered new host")
+			newCount++
+		} else if needUpdate {
+			l.Info("discovered changed host")
+			updatedCount++
+		}
+	}
+	log.Info("discovery report", "total", totalCount, "new", newCount, "updated", updatedCount)
+	return nil
 }
 
-func updateQueues(store *SQLiteStore) {
+func updateQueues(store *SQLiteStore) error {
 	queued, err := store.initHostCreds()
 	if err != nil {
-		log.Fatal(err)
-	}
-	if queued > 0 {
-		log.Printf("queued %d new credential checks", queued)
+		return err
 	}
 	queuesize, err := store.getScanQueueSize()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	if queuesize > 0 {
-		log.Printf("%d total credential checks queued", queuesize)
-	}
+	log.Info("brute force queue size", "new", queued, "total", queuesize)
+	return nil
 }
 
-func Discover(store *SQLiteStore, cfg ScanConfiguration) {
+func Discover(store *SQLiteStore, cfg ScanConfiguration) error {
 	//Push all candidate hosts into the banner fetcher queue
 	hostChan, err := discoverHosts(cfg)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	portResults := bannerFetcher(1024, hostChan)
 	keyResults := fingerPrintFetcher(512, portResults)
 
-	newHosts := checkStore(store, keyResults)
-
-	for host := range newHosts {
-		log.Print("New or Changed Host", host)
+	err = checkStore(store, keyResults)
+	if err != nil {
+		return err
 	}
-	updateQueues(store)
+
+	err = updateQueues(store)
+	return err
 }
 
-func brute(store *SQLiteStore, scantype string) {
+func brute(store *SQLiteStore, scantype string) error {
 	updateQueues(store)
 	var err error
 
@@ -133,7 +143,7 @@ func brute(store *SQLiteStore, scantype string) {
 		sc, err = store.getRescanQueue()
 	}
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "Error getting scan queue")
 	}
 
 	bruteChan := make(chan ScanRequest, 1024)
@@ -146,33 +156,51 @@ func brute(store *SQLiteStore, scantype string) {
 
 	bruteResults := bruteForcer(256, bruteChan)
 
+	var totalCount, errCount, negCount, posCount int
 	for br := range bruteResults {
-		log.Printf("Result %s %s %s", br.host.Hostport, br.cred, br.result)
+		l := log.New(
+			"host", br.host.Hostport,
+			"user", br.cred.User,
+			"password", br.cred.Password,
+			"result", br.result,
+		)
 		if br.err != nil {
-			log.Printf("Result %s %s", br.host.Hostport, br.err)
+			l.Error("brute force error", "err", br.err.Error())
+			errCount++
+		} else if br.result == "" {
+			l.Debug("negative brute force result")
+			negCount++
+		} else {
+			l.Info("positive brute force result")
+			posCount++
 		}
 		err = store.updateBruteResult(br)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
+		totalCount++
 	}
+	//TODO: return this instead
+	log.Info("brute force scan report", "total", totalCount, "neg", negCount, "pos", posCount, "err", errCount)
+	return nil
 }
 
-func Scan(store *SQLiteStore) {
-	brute(store, "scan")
+func Scan(store *SQLiteStore) error {
+	return brute(store, "scan")
 }
-func Rescan(store *SQLiteStore) {
-	brute(store, "rescan")
-}
-
-func Dupes(store *SQLiteStore) {
-	store.duplicateKeyReport()
+func Rescan(store *SQLiteStore) error {
+	return brute(store, "rescan")
 }
 
-func Logcheck(store *SQLiteStore) {
+func Dupes(store *SQLiteStore) error {
+	//FIXME: return DATA here
+	return store.duplicateKeyReport()
+}
+
+func Logcheck(store *SQLiteStore) error {
 	sc, err := store.getLogCheckQueue()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	bruteChan := make(chan ScanRequest, 1024)
@@ -186,23 +214,25 @@ func Logcheck(store *SQLiteStore) {
 	bruteResults := bruteForcer(256, bruteChan)
 
 	for br := range bruteResults {
+		l := log.New("host", br.host.Hostport, "user", br.cred.User)
 		if br.err != nil {
-			log.Printf("Failed to send logcheck auth request for %s %s %s", br.host.Hostport, br.cred.User, br.err)
+			l.Error("Failed to send logcheck auth request", "error", br.err)
 			continue
 		}
-		log.Printf("Sent logcheck auth request for %s %s", br.host.Hostport, br.cred.User)
+		l.Info("Sent logcheck auth request")
 		//TODO Collect hostports and return them for syslog cross referencing
 	}
+	return nil
 }
-func LogcheckReport(store *SQLiteStore, ls LogSearcher) {
+func LogcheckReport(store *SQLiteStore, ls LogSearcher) error {
 	activeHosts, err := store.GetActiveHosts()
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "LogcheckReport GetActiveHosts failed")
 	}
 
 	foundIPs, err := ls.GetIPs()
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "LogcheckReport GetIPs failed")
 	}
 
 	logPresent := make(map[string]bool)
@@ -210,23 +240,24 @@ func LogcheckReport(store *SQLiteStore, ls LogSearcher) {
 		logPresent[host] = true
 	}
 
-	log.Printf("Found %d active hosts in store", len(activeHosts))
-	log.Printf("Found %d IPs in logs", len(foundIPs))
+	log.Info("found active hosts in store", "count", len(activeHosts))
+	log.Info("found related hosts in logs", "count", len(foundIPs))
 
 	for _, host := range activeHosts {
 		ip, _, err := net.SplitHostPort(host.Hostport)
 		if err != nil {
-			log.Printf("invalid hostport for: %v", host)
+			log.Error("invalid hostport", "host", host.Hostport)
 			continue
 		}
 		fmt.Printf("%s %v\n", host.Hostport, logPresent[ip])
 	}
+	return nil
 }
 
-func Vulnerabilities(store *SQLiteStore) {
+func Vulnerabilities(store *SQLiteStore) error {
 	vulns, err := store.GetVulnerabilities()
 	if err != nil {
-		log.Fatal(err)
+		return errors.Wrap(err, "Vulnerabilities GetVulnerabilities failed")
 	}
 	for _, v := range vulns {
 		fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n",
@@ -238,4 +269,5 @@ func Vulnerabilities(store *SQLiteStore) {
 			v.Host.Version,
 		)
 	}
+	return nil
 }

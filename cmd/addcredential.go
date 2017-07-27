@@ -1,7 +1,9 @@
 package cmd
 
 import (
-	"log"
+	"os"
+
+	log "github.com/inconshreveable/log15"
 
 	"github.com/ncsa/ssh-auditor/sshauditor"
 	"github.com/spf13/cobra"
@@ -19,15 +21,21 @@ var addcredentialCmd = &cobra.Command{
 			cmd.Usage()
 			return
 		}
-		//FIXME: use scanIntervalDays
 		cred := sshauditor.Credential{
 			User:         args[0],
 			Password:     args[1],
 			ScanInterval: scanIntervalDays,
 		}
-		err := store.AddCredential(cred)
+		l := log.New("user", cred.User, "password", cred.Password, "interval", scanIntervalDays)
+		added, err := store.AddCredential(cred)
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err.Error())
+			os.Exit(1)
+		}
+		if added {
+			l.Info("added credential")
+		} else {
+			l.Info("updated credential")
 		}
 	},
 }

@@ -3,9 +3,9 @@ package sshauditor
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net"
 
+	log "github.com/inconshreveable/log15"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -169,11 +169,22 @@ func (s *SQLiteStore) Get(dest interface{}, query string, args ...interface{}) e
 	return tx.Get(dest, query, args...)
 }
 
-func (s *SQLiteStore) AddCredential(c Credential) error {
-	_, err := s.Exec(
-		"INSERT INTO credentials (user, password, scan_interval) VALUES ($1, $2, $3)",
+func (s *SQLiteStore) AddCredential(c Credential) (bool, error) {
+	res, err := s.Exec(
+		"INSERT OR IGNORE INTO credentials (user, password, scan_interval) VALUES ($1, $2, $3)",
 		c.User, c.Password, c.ScanInterval)
-	return err
+	if err != nil {
+		return false, errors.Wrap(err, "AddCredential")
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, errors.Wrap(err, "AddCredential")
+	}
+	added := affected == 1
+	_, err = s.Exec(
+		"UPDATE credentials SET scan_interval=$3 WHERE user=$1 AND password=$2",
+		c.User, c.Password, c.ScanInterval)
+	return added, errors.Wrap(err, "AddCredential")
 }
 
 func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
@@ -183,7 +194,7 @@ func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
 
 	err := s.Select(&hostList, "SELECT * FROM hosts")
 	if err != nil {
-		return hosts, err
+		return hosts, errors.Wrap(err, "getKnownHosts")
 	}
 	for _, h := range hostList {
 		hosts[h.Hostport] = h
@@ -199,7 +210,7 @@ func (s *SQLiteStore) resetHostCreds(h SSHHost) error {
 func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 	err := s.resetHostCreds(h)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "addOrUpdateHost")
 	}
 	res, err := s.Exec(
 		`UPDATE hosts SET version=$1,fingerprint=$2,seen_last=datetime('now', 'localtime')
@@ -210,7 +221,7 @@ func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 	}
 	rows, err := res.RowsAffected()
 	if rows != 0 {
-		return err
+		return errors.Wrap(err, "addOrUpdateHost")
 	}
 	_, err = s.Exec(
 		`INSERT INTO hosts (hostport, version, fingerprint, seen_first, seen_last) VALUES
@@ -223,7 +234,7 @@ func (s *SQLiteStore) setLastSeen(h SSHHost) error {
 	_, err := s.Exec(
 		"UPDATE hosts SET seen_last=datetime('now', 'localtime') WHERE hostport=$1",
 		h.hostport)
-	return err
+	return errors.Wrap(err, "setLastSeen")
 }
 
 func (s *SQLiteStore) addHostChange(h SSHHost, changeType, old, new string) error {
@@ -238,42 +249,42 @@ func (s *SQLiteStore) addHostChanges(new SSHHost, old Host) error {
 	if old.Fingerprint != new.keyfp {
 		err = s.addHostChange(new, "fingerprint", old.Fingerprint, new.keyfp)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "addHostChange")
 		}
 	}
 	if old.Version != new.version {
 		err = s.addHostChange(new, "version", old.Version, new.version)
 	}
-	return err
+	return errors.Wrap(err, "addHostChange")
 }
 
 func (s *SQLiteStore) getAllCreds() ([]Credential, error) {
 	credentials := []Credential{}
 	err := s.Select(&credentials, "SELECT * from credentials")
-	return credentials, err
+	return credentials, errors.Wrap(err, "getAllCreds")
 }
 
 func (s *SQLiteStore) initHostCreds() (int, error) {
 	_, err := s.Begin()
 	defer s.Commit()
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "initHostCreds")
 	}
 	creds, err := s.getAllCreds()
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "initHostCreds")
 	}
 
 	knownHosts, err := s.getKnownHosts()
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "initHostCreds")
 	}
 
 	inserted := 0
 	for _, host := range knownHosts {
 		ins, err := s.initHostCredsForHost(creds, host)
 		if err != nil {
-			return inserted, err
+			return inserted, errors.Wrap(err, "initHostCreds")
 		}
 		inserted += ins
 	}
@@ -286,7 +297,7 @@ func (s *SQLiteStore) initHostCredsForHost(creds []Credential, h Host) (int, err
 			($1, $2, $3, 0, '', $4)`,
 			h.Hostport, c.User, c.Password, c.ScanInterval)
 		if err != nil {
-			return inserted, err
+			return inserted, errors.Wrap(err, "initHostCredsForHost")
 		}
 		rows, err := res.RowsAffected()
 		inserted += int(rows)
@@ -300,7 +311,7 @@ func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
 	credentials := []HostCredential{}
 	err := s.Select(&credentials, query)
 	if err != nil {
-		return requests, err
+		return requests, errors.Wrap(err, "getScanQueueHelper")
 	}
 
 	for _, hc := range credentials {
@@ -337,7 +348,7 @@ func (s *SQLiteStore) getScanQueueSize() (int, error) {
 
 	var cnt int
 	err := s.Get(&cnt, q)
-	return cnt, err
+	return cnt, errors.Wrap(err, "getScanQueueSize")
 }
 func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
 	q := `select * from host_creds where result !='' order by last_tested ASC limit 20000`
@@ -348,7 +359,7 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 	_, err := s.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
 		br.result, br.host.Hostport, br.cred.User, br.cred.Password)
-	return err
+	return errors.Wrap(err, "updateBruteResult")
 }
 
 func (s *SQLiteStore) duplicateKeyReport() error {
@@ -357,7 +368,7 @@ func (s *SQLiteStore) duplicateKeyReport() error {
 	err := s.Select(&hosts, "SELECT * FROM hosts where fingerprint != ''")
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "duplicateKeyReport")
 	}
 
 	keyMap := make(map[string][]Host)
@@ -386,13 +397,13 @@ func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
 	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-14 day')`
 	err := s.Select(&hostList, query)
 	if err != nil {
-		return requests, err
+		return requests, errors.Wrap(err, "getLogCheckQueue")
 	}
 
 	for _, h := range hostList {
 		host, _, err := net.SplitHostPort(h.Hostport)
 		if err != nil {
-			log.Printf("Bad hostport? %s %s", h.Hostport, err)
+			log.Warn("bad hostport? %s %s", h.Hostport, err)
 			continue
 		}
 		user := fmt.Sprintf("logcheck-%s", host)
@@ -425,12 +436,12 @@ func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
 		and result!='' order by last_tested asc`
 
 	err := s.Select(&creds, q)
-	return creds, err
+	return creds, errors.Wrap(err, "GetVulnerabilities")
 }
 
 func (s *SQLiteStore) GetActiveHosts() ([]Host, error) {
 	hostList := []Host{}
 	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-2 day')`
 	err := s.Select(&hostList, query)
-	return hostList, err
+	return hostList, errors.Wrap(err, "GetActiveHosts")
 }

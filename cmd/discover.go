@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"os"
+
+	log "github.com/inconshreveable/log15"
 	"github.com/ncsa/ssh-auditor/sshauditor"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +26,11 @@ var discoverCmd = &cobra.Command{
 			Exclude: exclude,
 			Ports:   ports,
 		}
-		sshauditor.Discover(store, scanConfig)
+		err := sshauditor.Discover(store, scanConfig)
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
 	},
 }
 
