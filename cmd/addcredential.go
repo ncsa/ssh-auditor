@@ -19,15 +19,20 @@ var addcredentialCmd = &cobra.Command{
 			cmd.Usage()
 			return
 		}
-		//FIXME: use scanIntervalDays
+		l := log.WithFields(log.Fields{"user": args[0], "password": args[1], "interval": scanIntervalDays})
 		cred := sshauditor.Credential{
 			User:         args[0],
 			Password:     args[1],
 			ScanInterval: scanIntervalDays,
 		}
-		err := store.AddCredential(cred)
+		added, err := store.AddCredential(cred)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if added {
+			l.Info("Added credential")
+		} else {
+			l.Info("Updated credential")
 		}
 	},
 }

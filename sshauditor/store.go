@@ -169,17 +169,22 @@ func (s *SQLiteStore) Get(dest interface{}, query string, args ...interface{}) e
 	return tx.Get(dest, query, args...)
 }
 
-func (s *SQLiteStore) AddCredential(c Credential) error {
-	_, err := s.Exec(
+func (s *SQLiteStore) AddCredential(c Credential) (bool, error) {
+	res, err := s.Exec(
 		"INSERT OR IGNORE INTO credentials (user, password, scan_interval) VALUES ($1, $2, $3)",
 		c.User, c.Password, c.ScanInterval)
 	if err != nil {
-		return err
+		return false, err
 	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	added := affected == 1
 	_, err = s.Exec(
 		"UPDATE credentials SET scan_interval=$3 WHERE user=$1 AND password=$2",
 		c.User, c.Password, c.ScanInterval)
-	return err
+	return added, err
 }
 
 func (s *SQLiteStore) getKnownHosts() (map[string]Host, error) {
