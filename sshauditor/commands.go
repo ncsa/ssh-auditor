@@ -2,10 +2,11 @@ package sshauditor
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type ScanConfiguration struct {

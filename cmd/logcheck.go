@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/ncsa/ssh-auditor/sshauditor"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 

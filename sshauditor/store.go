@@ -3,12 +3,12 @@ package sshauditor
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const schema = `
@@ -392,7 +392,7 @@ func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
 	for _, h := range hostList {
 		host, _, err := net.SplitHostPort(h.Hostport)
 		if err != nil {
-			log.Printf("Bad hostport? %s %s", h.Hostport, err)
+			log.Warn("Bad hostport? %s %s", h.Hostport, err)
 			continue
 		}
 		user := fmt.Sprintf("logcheck-%s", host)

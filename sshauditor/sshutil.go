@@ -2,11 +2,11 @@ package sshauditor
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -72,7 +72,7 @@ func FetchSSHKeyFingerprint(hostport string) string {
 	if err == nil {
 		//This was supposed to fail
 		client.Close()
-		log.Printf("BADPW %s: user=security password=security", hostport)
+		log.Error("BADPW %s: user=%s password=security worked!?", hostport, user)
 	}
 	return keyFingerprint
 }
