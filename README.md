@@ -14,9 +14,14 @@ ssh-auditor will automatically:
 It's designed so that you can run `ssh-auditor discover` + `ssh-auditor scan`
 from cron every hour to to perform a constant audit.
 
-## Demo
+## Demos
 
+# Earlier demo showing all of the features
 [![demo](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv.png)](https://asciinema.org/a/5rb3wv8oyoqzd80jfl03grrcv?autoplay=1)
+
+# Demo showing improved log output
+
+[![demo](https://asciinema.org/a/CjOMXwiHVvgZBzOzs4hY4NtZU.png)](https://asciinema.org/a/CjOMXwiHVvgZBzOzs4hY4NtZU?autoplay=1)
 
 
 ## Usage
