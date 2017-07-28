@@ -38,11 +38,11 @@ var RootCmd = &cobra.Command{
 		if debug {
 			log.Root().SetHandler(log.LvlFilterHandler(
 				log.LvlDebug,
-				log.Root().GetHandler()))
+				log.StderrHandler))
 		} else {
 			log.Root().SetHandler(log.LvlFilterHandler(
 				log.LvlInfo,
-				log.Root().GetHandler()))
+				log.StderrHandler))
 		}
 		return initStore()
 	},
