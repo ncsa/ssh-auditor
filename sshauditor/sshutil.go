@@ -91,7 +91,7 @@ func SSHExecAttempt(client *ssh.Client, hostport string) bool {
 		return false
 	}
 	if isFalsePositiveBanner(string(out)) {
-		log.Error("successful login but unexpected id command output", "host", hostport, "output", out)
+		log.Error("successful login but unexpected id command output", "host", hostport, "output", string(out))
 		return false
 	}
 	return true
