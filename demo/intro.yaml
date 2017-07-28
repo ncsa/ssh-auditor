@@ -1,0 +1,90 @@
+title: ssh-auditor
+before: rm -f ssh_db.sqlite && export PS1='$ ' && clear
+scenes: 
+  - name: started
+    line: Let's get started!
+  - name: install
+    action: go get github.com/ncsa/ssh-auditor
+    wait: true
+  - name:
+    line: ensure our path is set properly. GOPATH is normally ~/go/
+  - name: set path
+    action: PATH=$PATH:$(go env GOPATH)
+    wait: true
+  - name: show help
+    action: ssh-auditor
+    hesitate: 2
+    wait: true
+  - name: it works
+    line: It looks like it's working!
+  - name: pause
+    pause: 1
+
+  - name: add some credentials
+    line: Let's add some credentials
+  - name: pause
+    pause: 1
+  - name: ac
+    action: ssh-auditor addcredential root root
+    hesitate: 1
+  - name: ac
+    action: ssh-auditor ac admin admin
+  - name: scan?
+    action: ssh-auditor scan
+    hesitate: 2
+  - name: nothing to do
+    line: no hosts yet, so nothing to do
+  - name: pause
+    pause: 2
+  - name: need to discover
+    line: we need to discover some hosts first
+  - name: discover
+    action: ssh-auditor discover 192.168.2.0/24
+    hesitate: 2
+    wait: true
+  - name: scan?
+    action: ssh-auditor scan --debug
+    wait: true
+
+  - name: one more
+    line: If we add a new credential, ssh-auditor will scan all known hosts with that new credential.
+  - name: ac
+    action: ssh-auditor ac test test
+    wait: true
+  - name: scan?
+    action: ssh-auditor scan --debug
+    wait: true
+
+  - name: more hosts
+    line: Let's find some new hosts
+  - name: discover again
+    action: ssh-auditor discover 192.168.2.0/24 -p 2221
+    hesitate: 1
+    wait: true
+  - name: and rescan
+    line: And re-scan
+  - name: scan?
+    action: ssh-auditor scan --debug
+    wait: true
+
+  - name: ac ubnt ubnt
+    action: ssh-auditor ac ubnt ubnt
+    wait: true
+  - name: scan?
+    action: ssh-auditor scan
+    wait: true
+
+  - name: log
+    line: When the output is to a file, logs are machine readable
+  - name: discover to a log
+    action: ssh-auditor discover 192.168.2.0/24 -p 2221 &> ssh.log
+    hesitate: 1
+    wait: true
+  - name: show log
+    action: cat ssh.log
+    wait: true
+
+  - name: end
+    line: That's it!
+  - name: pause
+    pause: 5
