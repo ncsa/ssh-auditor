@@ -21,7 +21,7 @@ from cron every hour to to perform a constant audit.
 
 # Demo showing improved log output
 
-[![demo](https://asciinema.org/a/CjOMXwiHVvgZBzOzs4hY4NtZU.png)](https://asciinema.org/a/CjOMXwiHVvgZBzOzs4hY4NtZU?autoplay=1)
+[![demo](https://asciinema.org/a/F3fQYyJcieCS9Kfna6xWferjK.png)](https://asciinema.org/a/F3fQYyJcieCS9Kfna6xWferjK?autoplay=1)
 
 
 ## Usage

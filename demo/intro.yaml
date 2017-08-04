@@ -7,7 +7,7 @@ scenes:
     action: go get github.com/ncsa/ssh-auditor
     wait: true
   - name:
-    line: ensure our path is set properly. GOPATH is normally ~/go/
+    line: Ensure our path is set properly. GOPATH is normally ~/go/
   - name: set path
     action: PATH=$PATH:$(go env GOPATH)
     wait: true
@@ -20,34 +20,49 @@ scenes:
   - name: pause
     pause: 1
 
-  - name: add some credentials
-    line: Let's add some credentials
-  - name: pause
-    pause: 1
-  - name: ac
-    action: ssh-auditor addcredential root root
-    hesitate: 1
-  - name: ac
-    action: ssh-auditor ac admin admin
-  - name: scan?
-    action: ssh-auditor scan
-    hesitate: 2
-  - name: nothing to do
-    line: no hosts yet, so nothing to do
-  - name: pause
-    pause: 2
-  - name: need to discover
-    line: we need to discover some hosts first
+  - name: Discover some hosts
+    line: First we need to discover hosts running sshd
   - name: discover
     action: ssh-auditor discover 192.168.2.0/24
     hesitate: 2
     wait: true
+  - name: Scan?
+    line: Now that we have some hosts, can we scan then?
   - name: scan?
     action: ssh-auditor scan --debug
     wait: true
+  - name: not yet!
+    line: Not yet!  Before we can scan the hosts, we need credentials
+  - name: add some credentials
+    line: Let's add some!
+  - name: pause
+    pause: 1
+
+  - name: ac
+    action: ssh-auditor addcredential root root
+    hesitate: 1
+    wait: true
+  - name: alias
+    line: ac is an alias for addcredential
+  - name: ac
+    action: ssh-auditor ac admin admin
+    wait: true
+
+  - name: Scan?
+    line: Now that we have credentials, can we scan the hosts now?
+  - name: scan?
+    action: ssh-auditor scan --debug
+    hesitate: 2
+    wait: true
+  - name: vuln?
+    action: ssh-auditor vuln
+    hesitate: 2
+    wait: true
+  - name: good
+    line: Nothing vulnerable, so far so good
 
   - name: one more
-    line: If we add a new credential, ssh-auditor will scan all known hosts with that new credential.
+    line: If we add a new credential, ssh-auditor will scan all known hosts with that new credential
   - name: ac
     action: ssh-auditor ac test test
     wait: true
@@ -61,17 +76,17 @@ scenes:
     action: ssh-auditor discover 192.168.2.0/24 -p 2221
     hesitate: 1
     wait: true
-  - name: and rescan
-    line: And re-scan
-  - name: scan?
-    action: ssh-auditor scan --debug
-    wait: true
-
+  - name: again!
+    line: Before we re-scan, let's add one more new credential
   - name: ac ubnt ubnt
     action: ssh-auditor ac ubnt ubnt
     wait: true
+  - name: and rescan
+    line: Now if we re-scan, ssh-auditor will scan the new credential on all hosts
+  - name: ..
+    line: as well as scan the new host with all the old credentials
   - name: scan?
-    action: ssh-auditor scan
+    action: ssh-auditor scan --debug
     wait: true
 
   - name: log
