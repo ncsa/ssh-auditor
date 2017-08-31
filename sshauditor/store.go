@@ -336,7 +336,7 @@ func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 		where hosts.hostport = host_creds.hostport and
 		last_tested < datetime('now', 'localtime',  -scan_interval || ' day') and
 		hosts.fingerprint != '' and
-		seen_last > datetime('now', 'localtime', '-14 day') order by last_tested ASC limit 20000`
+		seen_last > datetime('now', 'localtime', '-7 day') order by last_tested ASC limit 20000`
 	return s.getScanQueueHelper(q)
 }
 func (s *SQLiteStore) getScanQueueSize() (int, error) {
@@ -344,7 +344,7 @@ func (s *SQLiteStore) getScanQueueSize() (int, error) {
 		where hosts.hostport = host_creds.hostport and
 		last_tested < datetime('now', 'localtime', -scan_interval || ' day') and
 		hosts.fingerprint != '' and
-		seen_last > datetime('now', 'localtime', '-14 day')`
+		seen_last > datetime('now', 'localtime', '-7 day')`
 
 	var cnt int
 	err := s.Get(&cnt, q)
