@@ -12,7 +12,10 @@ var rescanCmd = &cobra.Command{
 	Use:   "rescan",
 	Short: "Rescan hosts with credentials that have previously worked",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := sshauditor.Rescan(store)
+		scanConfig := sshauditor.ScanConfiguration{
+			Concurrency: concurrency,
+		}
+		err := sshauditor.Rescan(store, scanConfig)
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)

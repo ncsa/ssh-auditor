@@ -11,6 +11,7 @@ import (
 var store *sshauditor.SQLiteStore
 var dbPath string
 var debug bool
+var concurrency int
 
 func initStore() error {
 	//This should really return err, but it doesn't look as nice as when I fail immediately
@@ -52,6 +53,7 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
+	RootCmd.PersistentFlags().IntVar(&concurrency, "concurrency", 256, "Number of concurrent hosts to scan at once")
 	RootCmd.PersistentFlags().StringVar(&dbPath, "db", "ssh_db.sqlite", "Path to database file")
 	RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "debug")
 }

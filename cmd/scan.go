@@ -12,7 +12,10 @@ var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan hosts using new or outdated credentials",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := sshauditor.Scan(store)
+		scanConfig := sshauditor.ScanConfiguration{
+			Concurrency: concurrency,
+		}
+		err := sshauditor.Scan(store, scanConfig)
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)

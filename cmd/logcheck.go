@@ -20,7 +20,10 @@ var logcheckRunCmd = &cobra.Command{
 	Long: `trigger failed ssh authentication attempts in order to verify that
 		local servers are properly shipping logs to a central collector`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := sshauditor.Logcheck(store)
+		scanConfig := sshauditor.ScanConfiguration{
+			Concurrency: concurrency,
+		}
+		err := sshauditor.Logcheck(store, scanConfig)
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)

@@ -22,9 +22,10 @@ var discoverCmd = &cobra.Command{
 			return
 		}
 		scanConfig := sshauditor.ScanConfiguration{
-			Include: args,
-			Exclude: exclude,
-			Ports:   ports,
+			Concurrency: concurrency,
+			Include:     args,
+			Exclude:     exclude,
+			Ports:       ports,
 		}
 		err := sshauditor.Discover(store, scanConfig)
 		if err != nil {

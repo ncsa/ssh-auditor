@@ -11,9 +11,10 @@ import (
 )
 
 type ScanConfiguration struct {
-	Include []string
-	Exclude []string
-	Ports   []int
+	Include     []string
+	Exclude     []string
+	Ports       []int
+	Concurrency int
 }
 
 func joinInts(ints []int, sep string) string {
@@ -119,8 +120,8 @@ func Discover(store *SQLiteStore, cfg ScanConfiguration) error {
 		return err
 	}
 
-	portResults := bannerFetcher(1024, hostChan)
-	keyResults := fingerPrintFetcher(512, portResults)
+	portResults := bannerFetcher(cfg.Concurrency*2, hostChan)
+	keyResults := fingerPrintFetcher(cfg.Concurrency, portResults)
 
 	err = checkStore(store, keyResults)
 	if err != nil {
@@ -131,7 +132,7 @@ func Discover(store *SQLiteStore, cfg ScanConfiguration) error {
 	return err
 }
 
-func brute(store *SQLiteStore, scantype string) error {
+func brute(store *SQLiteStore, scantype string, cfg ScanConfiguration) error {
 	updateQueues(store)
 	var err error
 
@@ -154,7 +155,7 @@ func brute(store *SQLiteStore, scantype string) error {
 		close(bruteChan)
 	}()
 
-	bruteResults := bruteForcer(256, bruteChan)
+	bruteResults := bruteForcer(cfg.Concurrency, bruteChan)
 
 	var totalCount, errCount, negCount, posCount int
 	for br := range bruteResults {
@@ -185,11 +186,11 @@ func brute(store *SQLiteStore, scantype string) error {
 	return nil
 }
 
-func Scan(store *SQLiteStore) error {
-	return brute(store, "scan")
+func Scan(store *SQLiteStore, cfg ScanConfiguration) error {
+	return brute(store, "scan", cfg)
 }
-func Rescan(store *SQLiteStore) error {
-	return brute(store, "rescan")
+func Rescan(store *SQLiteStore, cfg ScanConfiguration) error {
+	return brute(store, "rescan", cfg)
 }
 
 func Dupes(store *SQLiteStore) error {
@@ -197,7 +198,7 @@ func Dupes(store *SQLiteStore) error {
 	return store.duplicateKeyReport()
 }
 
-func Logcheck(store *SQLiteStore) error {
+func Logcheck(store *SQLiteStore, cfg ScanConfiguration) error {
 	sc, err := store.getLogCheckQueue()
 	if err != nil {
 		return err
@@ -211,7 +212,7 @@ func Logcheck(store *SQLiteStore) error {
 		close(bruteChan)
 	}()
 
-	bruteResults := bruteForcer(256, bruteChan)
+	bruteResults := bruteForcer(cfg.Concurrency, bruteChan)
 
 	for br := range bruteResults {
 		l := log.New("host", br.host.Hostport, "user", br.cred.User)
