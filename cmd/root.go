@@ -26,7 +26,6 @@ func initStore() error {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
-	_, err = s.Begin()
 	store = s
 	return err
 }
@@ -46,9 +45,6 @@ var RootCmd = &cobra.Command{
 				log.StderrHandler))
 		}
 		return initStore()
-	},
-	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-		return store.Commit()
 	},
 }
 

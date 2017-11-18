@@ -70,6 +70,12 @@ func New(store *SQLiteStore) *SSHAuditor {
 }
 
 func (a *SSHAuditor) updateStoreFromDiscovery(hosts chan SSHHost) error {
+	_, err := a.store.Begin()
+	defer a.store.Commit()
+	if err != nil {
+		return errors.Wrap(err, "updateStoreFromDiscovery")
+	}
+
 	knownHosts, err := a.store.getKnownHosts()
 	if err != nil {
 		return err
@@ -165,6 +171,11 @@ func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) (AuditResult,
 	}
 	if err != nil {
 		return res, errors.Wrap(err, "Error getting scan queue")
+	}
+	_, err = a.store.Begin()
+	defer a.store.Commit()
+	if err != nil {
+		return res, errors.Wrap(err, "brute")
 	}
 
 	bruteChan := make(chan ScanRequest, 1024)
