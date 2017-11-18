@@ -106,11 +106,22 @@ func SSHDialAttempt(client *ssh.Client, dest string) bool {
 	return err == nil
 }
 
+func challengeReponder(password string) ssh.KeyboardInteractiveChallenge {
+	return func(user, instruction string, questions []string, echos []bool) ([]string, error) {
+		answers := make([]string, len(questions))
+		for i, _ := range answers {
+			answers[i] = password
+		}
+		return answers, nil
+	}
+}
+
 func SSHAuthAttempt(hostport, user, password string) (string, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
+			ssh.KeyboardInteractive(challengeReponder(password)),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         4 * time.Second,
