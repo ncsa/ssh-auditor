@@ -16,6 +16,12 @@ type ScanConfiguration struct {
 	Ports       []int
 	Concurrency int
 }
+type AuditResult struct {
+	totalCount int
+	negCount   int
+	posCount   int
+	errCount   int
+}
 
 func joinInts(ints []int, sep string) string {
 	var foo []string
@@ -145,7 +151,8 @@ func (a *SSHAuditor) Discover(cfg ScanConfiguration) error {
 	return err
 }
 
-func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) error {
+func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) (AuditResult, error) {
+	var res AuditResult
 	a.updateQueues()
 	var err error
 
@@ -157,7 +164,7 @@ func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) error {
 		sc, err = a.store.getRescanQueue()
 	}
 	if err != nil {
-		return errors.Wrap(err, "Error getting scan queue")
+		return res, errors.Wrap(err, "Error getting scan queue")
 	}
 
 	bruteChan := make(chan ScanRequest, 1024)
@@ -190,19 +197,23 @@ func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) error {
 		}
 		err = a.store.updateBruteResult(br)
 		if err != nil {
-			return err
+			return res, err
 		}
 		totalCount++
 	}
-	//TODO: return this instead
 	log.Info("brute force scan report", "total", totalCount, "neg", negCount, "pos", posCount, "err", errCount)
-	return nil
+	return AuditResult{
+		totalCount: totalCount,
+		negCount:   negCount,
+		posCount:   posCount,
+		errCount:   errCount,
+	}, nil
 }
 
-func (a *SSHAuditor) Scan(cfg ScanConfiguration) error {
+func (a *SSHAuditor) Scan(cfg ScanConfiguration) (AuditResult, error) {
 	return a.brute("scan", cfg)
 }
-func (a *SSHAuditor) Rescan(cfg ScanConfiguration) error {
+func (a *SSHAuditor) Rescan(cfg ScanConfiguration) (AuditResult, error) {
 	return a.brute("rescan", cfg)
 }
 

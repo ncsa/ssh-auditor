@@ -16,7 +16,7 @@ var scanCmd = &cobra.Command{
 			Concurrency: concurrency,
 		}
 		auditor := sshauditor.New(store)
-		err := auditor.Scan(scanConfig)
+		_, err := auditor.Scan(scanConfig)
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)
