@@ -20,10 +20,11 @@ var logcheckRunCmd = &cobra.Command{
 	Long: `trigger failed ssh authentication attempts in order to verify that
 		local servers are properly shipping logs to a central collector`,
 	Run: func(cmd *cobra.Command, args []string) {
+		auditor := sshauditor.New(store)
 		scanConfig := sshauditor.ScanConfiguration{
 			Concurrency: concurrency,
 		}
-		err := sshauditor.Logcheck(store, scanConfig)
+		err := auditor.Logcheck(scanConfig)
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)
@@ -47,7 +48,8 @@ var logcheckReportCmd = &cobra.Command{
 			log.Error("only --splunk supported for now")
 			os.Exit(1)
 		}
-		err := sshauditor.LogcheckReport(store, ls)
+		auditor := sshauditor.New(store)
+		err := auditor.LogcheckReport(ls)
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)

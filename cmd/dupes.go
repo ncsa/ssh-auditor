@@ -12,7 +12,8 @@ var dupesCmd = &cobra.Command{
 	Use:   "dupes",
 	Short: "Show hosts using the same key",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := sshauditor.Dupes(store)
+		auditor := sshauditor.New(store)
+		err := auditor.Dupes()
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)

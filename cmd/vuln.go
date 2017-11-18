@@ -12,7 +12,8 @@ var vulnCmd = &cobra.Command{
 	Use:   "vuln",
 	Short: "Show vulnerabilities",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := sshauditor.Vulnerabilities(store)
+		auditor := sshauditor.New(store)
+		err := auditor.Vulnerabilities()
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)
