@@ -160,7 +160,7 @@ func brute(store *SQLiteStore, scantype string, cfg ScanConfiguration) error {
 	var totalCount, errCount, negCount, posCount int
 	for br := range bruteResults {
 		l := log.New(
-			"host", br.host.Hostport,
+			"host", br.hostport,
 			"user", br.cred.User,
 			"password", br.cred.Password,
 			"result", br.result,
@@ -215,7 +215,7 @@ func Logcheck(store *SQLiteStore, cfg ScanConfiguration) error {
 	bruteResults := bruteForcer(cfg.Concurrency, bruteChan)
 
 	for br := range bruteResults {
-		l := log.New("host", br.host.Hostport, "user", br.cred.User)
+		l := log.New("host", br.hostport, "user", br.cred.User)
 		if br.err != nil {
 			l.Error("Failed to send logcheck auth request", "error", br.err)
 			continue

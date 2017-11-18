@@ -318,7 +318,7 @@ func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
 		sr := requestMap[hc.Hostport]
 		if sr == nil {
 			sr = &ScanRequest{
-				host: Host{Hostport: hc.Hostport},
+				hostport: hc.Hostport,
 			}
 		}
 		sr.credentials = append(sr.credentials, Credential{User: hc.User, Password: hc.Password})
@@ -358,7 +358,7 @@ func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 	_, err := s.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
-		br.result, br.host.Hostport, br.cred.User, br.cred.Password)
+		br.result, br.hostport, br.cred.User, br.cred.Password)
 	return errors.Wrap(err, "updateBruteResult")
 }
 
@@ -411,7 +411,7 @@ func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
 		sr := requestMap[h.Hostport]
 		if sr == nil {
 			sr = &ScanRequest{
-				host: Host{Hostport: h.Hostport},
+				hostport: h.Hostport,
 			}
 		}
 		sr.credentials = append(sr.credentials, Credential{User: user, Password: "logcheck"})

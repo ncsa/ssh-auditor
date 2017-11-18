@@ -3,15 +3,15 @@ package sshauditor
 import "sync"
 
 type ScanRequest struct {
-	host        Host
+	hostport    string
 	credentials []Credential
 }
 
 type BruteForceResult struct {
-	host   Host
-	cred   Credential
-	err    error
-	result string
+	hostport string
+	cred     Credential
+	err      error
+	result   string
 }
 
 func bruteworker(id int, jobs <-chan ScanRequest, results chan<- BruteForceResult) {
@@ -23,12 +23,12 @@ func bruteworker(id int, jobs <-chan ScanRequest, results chan<- BruteForceResul
 			if failures > 5 {
 				continue
 			}
-			result, err := SSHAuthAttempt(sr.host.Hostport, cred.User, cred.Password)
+			result, err := SSHAuthAttempt(sr.hostport, cred.User, cred.Password)
 			res := BruteForceResult{
-				host:   sr.host,
-				cred:   cred,
-				result: result,
-				err:    err,
+				hostport: sr.hostport,
+				cred:     cred,
+				result:   result,
+				err:      err,
 			}
 			results <- res
 			if err != nil {
