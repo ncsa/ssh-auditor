@@ -37,7 +37,7 @@ var authTestCases = []struct {
 		"alpine-sshd-test-test-no-id-binary-no-tunnel:22",
 		"test",
 		"test",
-		"unknown",
+		"auth",
 		false,
 	},
 }
