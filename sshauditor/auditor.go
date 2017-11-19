@@ -231,7 +231,7 @@ func (a *SSHAuditor) Rescan(cfg ScanConfiguration) (AuditResult, error) {
 func (a *SSHAuditor) Dupes() (map[string][]Host, error) {
 	keyMap := make(map[string][]Host)
 
-	hosts, err := a.store.GetActiveHosts()
+	hosts, err := a.store.GetActiveHosts(2)
 
 	if err != nil {
 		return keyMap, errors.Wrap(err, "Dupes")
@@ -278,7 +278,7 @@ func (a *SSHAuditor) Logcheck(cfg ScanConfiguration) error {
 }
 
 func (a *SSHAuditor) LogcheckReport(ls LogSearcher) error {
-	activeHosts, err := a.store.GetActiveHosts()
+	activeHosts, err := a.store.GetActiveHosts(2)
 	if err != nil {
 		return errors.Wrap(err, "LogcheckReport GetActiveHosts failed")
 	}

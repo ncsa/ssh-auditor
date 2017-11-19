@@ -275,7 +275,7 @@ func (s *SQLiteStore) initHostCreds() (int, error) {
 		return 0, errors.Wrap(err, "initHostCreds")
 	}
 
-	knownHosts, err := s.getKnownHosts()
+	knownHosts, err := s.GetActiveHosts(7)
 	if err != nil {
 		return 0, errors.Wrap(err, "initHostCreds")
 	}
@@ -411,9 +411,11 @@ func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
 	return creds, errors.Wrap(err, "GetVulnerabilities")
 }
 
-func (s *SQLiteStore) GetActiveHosts() ([]Host, error) {
+//GetActiveHosts returns a list of hosts seen at most maxAgeDays ago
+func (s *SQLiteStore) GetActiveHosts(maxAgeDays int) ([]Host, error) {
 	hostList := []Host{}
-	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-2 day')`
-	err := s.Select(&hostList, query)
+	dayInterval := fmt.Sprintf("-%d day", maxAgeDays)
+	query := `SELECT * FROM hosts WHERE seen_last >= datetime('now', 'localtime', $1)`
+	err := s.Select(&hostList, query, dayInterval)
 	return hostList, errors.Wrap(err, "GetActiveHosts")
 }
