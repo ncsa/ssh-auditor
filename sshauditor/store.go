@@ -362,28 +362,6 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 	return errors.Wrap(err, "updateBruteResult")
 }
 
-func (s *SQLiteStore) DuplicateKeyReport() (map[string][]Host, error) {
-	keyMap := make(map[string][]Host)
-
-	hosts := []Host{}
-	err := s.Select(&hosts, "SELECT * FROM hosts where fingerprint != ''")
-
-	if err != nil {
-		return keyMap, errors.Wrap(err, "duplicateKeyReport")
-	}
-
-	for _, h := range hosts {
-		keyMap[h.Fingerprint] = append(keyMap[h.Fingerprint], h)
-	}
-
-	for fp, hosts := range keyMap {
-		if len(hosts) == 1 {
-			delete(keyMap, fp)
-		}
-	}
-	return keyMap, nil
-}
-
 func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
 	requestMap := make(map[string]*ScanRequest)
 	var requests []ScanRequest

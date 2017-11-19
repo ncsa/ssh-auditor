@@ -229,8 +229,24 @@ func (a *SSHAuditor) Rescan(cfg ScanConfiguration) (AuditResult, error) {
 }
 
 func (a *SSHAuditor) Dupes() (map[string][]Host, error) {
-	//FIXME: return DATA here
-	return a.store.DuplicateKeyReport()
+	keyMap := make(map[string][]Host)
+
+	hosts, err := a.store.GetActiveHosts()
+
+	if err != nil {
+		return keyMap, errors.Wrap(err, "Dupes")
+	}
+
+	for _, h := range hosts {
+		keyMap[h.Fingerprint] = append(keyMap[h.Fingerprint], h)
+	}
+
+	for fp, hosts := range keyMap {
+		if len(hosts) == 1 {
+			delete(keyMap, fp)
+		}
+	}
+	return keyMap, nil
 }
 
 func (a *SSHAuditor) Logcheck(cfg ScanConfiguration) error {
