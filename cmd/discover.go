@@ -27,7 +27,8 @@ var discoverCmd = &cobra.Command{
 			Exclude:     exclude,
 			Ports:       ports,
 		}
-		err := sshauditor.Discover(store, scanConfig)
+		auditor := sshauditor.New(store)
+		err := auditor.Discover(scanConfig)
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)

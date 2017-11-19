@@ -16,6 +16,12 @@ type ScanConfiguration struct {
 	Ports       []int
 	Concurrency int
 }
+type AuditResult struct {
+	totalCount int
+	negCount   int
+	posCount   int
+	errCount   int
+}
 
 func joinInts(ints []int, sep string) string {
 	var foo []string
@@ -25,7 +31,9 @@ func joinInts(ints []int, sep string) string {
 	return strings.Join(foo, sep)
 }
 
-func discoverHosts(cfg ScanConfiguration) (chan string, error) {
+//expandScanConfiguration takes a ScanConfiguration and returns a channel
+//of all hostports that match the scan configuration.
+func expandScanConfiguration(cfg ScanConfiguration) (chan string, error) {
 	hostChan := make(chan string, 1024)
 	hosts, err := EnumerateHosts(cfg.Include, cfg.Exclude)
 	if err != nil {
@@ -50,8 +58,25 @@ func discoverHosts(cfg ScanConfiguration) (chan string, error) {
 	return hostChan, err
 }
 
-func checkStore(store *SQLiteStore, hosts chan SSHHost) error {
-	knownHosts, err := store.getKnownHosts()
+type SSHAuditor struct {
+	//TODO: should be interface
+	store *SQLiteStore
+}
+
+func New(store *SQLiteStore) *SSHAuditor {
+	return &SSHAuditor{
+		store: store,
+	}
+}
+
+func (a *SSHAuditor) updateStoreFromDiscovery(hosts chan SSHHost) error {
+	_, err := a.store.Begin()
+	defer a.store.Commit()
+	if err != nil {
+		return errors.Wrap(err, "updateStoreFromDiscovery")
+	}
+
+	knownHosts, err := a.store.getKnownHosts()
 	if err != nil {
 		return err
 	}
@@ -68,23 +93,23 @@ func checkStore(store *SQLiteStore, hosts chan SSHHost) error {
 				host.version = rec.Version
 			}
 			needUpdate = (host.keyfp != rec.Fingerprint || host.version != rec.Version)
-			err := store.addHostChanges(host, rec)
+			err := a.store.addHostChanges(host, rec)
 			if err != nil {
-				return errors.Wrap(err, "checkStore")
+				return errors.Wrap(err, "updateStoreFromDiscovery")
 			}
 		}
 		l := log.New("host", host.hostport, "version", host.version, "fp", host.keyfp)
 		if !existing || needUpdate {
-			err = store.addOrUpdateHost(host)
+			err = a.store.addOrUpdateHost(host)
 			if err != nil {
-				return errors.Wrap(err, "checkStore")
+				return errors.Wrap(err, "updateStoreFromDiscovery")
 			}
 		}
 		//If it already existed and we didn't otherwise update it, mark that it was seen
 		if existing {
-			err = store.setLastSeen(host)
+			err = a.store.setLastSeen(host)
 			if err != nil {
-				return errors.Wrap(err, "checkStore")
+				return errors.Wrap(err, "updateStoreFromDiscovery")
 			}
 		}
 		totalCount++
@@ -100,12 +125,12 @@ func checkStore(store *SQLiteStore, hosts chan SSHHost) error {
 	return nil
 }
 
-func updateQueues(store *SQLiteStore) error {
-	queued, err := store.initHostCreds()
+func (a *SSHAuditor) updateQueues() error {
+	queued, err := a.store.initHostCreds()
 	if err != nil {
 		return err
 	}
-	queuesize, err := store.getScanQueueSize()
+	queuesize, err := a.store.getScanQueueSize()
 	if err != nil {
 		return err
 	}
@@ -113,9 +138,9 @@ func updateQueues(store *SQLiteStore) error {
 	return nil
 }
 
-func Discover(store *SQLiteStore, cfg ScanConfiguration) error {
+func (a *SSHAuditor) Discover(cfg ScanConfiguration) error {
 	//Push all candidate hosts into the banner fetcher queue
-	hostChan, err := discoverHosts(cfg)
+	hostChan, err := expandScanConfiguration(cfg)
 	if err != nil {
 		return err
 	}
@@ -123,28 +148,34 @@ func Discover(store *SQLiteStore, cfg ScanConfiguration) error {
 	portResults := bannerFetcher(cfg.Concurrency*2, hostChan)
 	keyResults := fingerPrintFetcher(cfg.Concurrency, portResults)
 
-	err = checkStore(store, keyResults)
+	err = a.updateStoreFromDiscovery(keyResults)
 	if err != nil {
 		return err
 	}
 
-	err = updateQueues(store)
+	err = a.updateQueues()
 	return err
 }
 
-func brute(store *SQLiteStore, scantype string, cfg ScanConfiguration) error {
-	updateQueues(store)
+func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) (AuditResult, error) {
+	var res AuditResult
+	a.updateQueues()
 	var err error
 
 	var sc []ScanRequest
 	switch scantype {
 	case "scan":
-		sc, err = store.getScanQueue()
+		sc, err = a.store.getScanQueue()
 	case "rescan":
-		sc, err = store.getRescanQueue()
+		sc, err = a.store.getRescanQueue()
 	}
 	if err != nil {
-		return errors.Wrap(err, "Error getting scan queue")
+		return res, errors.Wrap(err, "Error getting scan queue")
+	}
+	_, err = a.store.Begin()
+	defer a.store.Commit()
+	if err != nil {
+		return res, errors.Wrap(err, "brute")
 	}
 
 	bruteChan := make(chan ScanRequest, 1024)
@@ -160,7 +191,7 @@ func brute(store *SQLiteStore, scantype string, cfg ScanConfiguration) error {
 	var totalCount, errCount, negCount, posCount int
 	for br := range bruteResults {
 		l := log.New(
-			"host", br.host.Hostport,
+			"host", br.hostport,
 			"user", br.cred.User,
 			"password", br.cred.Password,
 			"result", br.result,
@@ -175,31 +206,75 @@ func brute(store *SQLiteStore, scantype string, cfg ScanConfiguration) error {
 			l.Info("positive brute force result")
 			posCount++
 		}
-		err = store.updateBruteResult(br)
+		err = a.store.updateBruteResult(br)
 		if err != nil {
-			return err
+			return res, err
 		}
 		totalCount++
 	}
-	//TODO: return this instead
 	log.Info("brute force scan report", "total", totalCount, "neg", negCount, "pos", posCount, "err", errCount)
-	return nil
+	return AuditResult{
+		totalCount: totalCount,
+		negCount:   negCount,
+		posCount:   posCount,
+		errCount:   errCount,
+	}, nil
 }
 
-func Scan(store *SQLiteStore, cfg ScanConfiguration) error {
-	return brute(store, "scan", cfg)
+func (a *SSHAuditor) Scan(cfg ScanConfiguration) (AuditResult, error) {
+	return a.brute("scan", cfg)
 }
-func Rescan(store *SQLiteStore, cfg ScanConfiguration) error {
-	return brute(store, "rescan", cfg)
-}
-
-func Dupes(store *SQLiteStore) error {
-	//FIXME: return DATA here
-	return store.duplicateKeyReport()
+func (a *SSHAuditor) Rescan(cfg ScanConfiguration) (AuditResult, error) {
+	return a.brute("rescan", cfg)
 }
 
-func Logcheck(store *SQLiteStore, cfg ScanConfiguration) error {
-	sc, err := store.getLogCheckQueue()
+func (a *SSHAuditor) Dupes() (map[string][]Host, error) {
+	keyMap := make(map[string][]Host)
+
+	hosts, err := a.store.GetActiveHosts(2)
+
+	if err != nil {
+		return keyMap, errors.Wrap(err, "Dupes")
+	}
+
+	for _, h := range hosts {
+		keyMap[h.Fingerprint] = append(keyMap[h.Fingerprint], h)
+	}
+
+	for fp, hosts := range keyMap {
+		if len(hosts) == 1 {
+			delete(keyMap, fp)
+		}
+	}
+	return keyMap, nil
+}
+func (a *SSHAuditor) getLogCheckScanQueue() ([]ScanRequest, error) {
+	var requests []ScanRequest
+	hostList, err := a.store.GetActiveHosts(14)
+	if err != nil {
+		return requests, errors.Wrap(err, "getLogCheckQueue")
+	}
+
+	for _, h := range hostList {
+		host, _, err := net.SplitHostPort(h.Hostport)
+		if err != nil {
+			log.Warn("bad hostport? %s %s", h.Hostport, err)
+			continue
+		}
+		user := fmt.Sprintf("logcheck-%s", host)
+
+		sr := ScanRequest{
+			hostport:    h.Hostport,
+			credentials: []Credential{{User: user, Password: "logcheck"}},
+		}
+		requests = append(requests, sr)
+	}
+
+	return requests, nil
+}
+
+func (a *SSHAuditor) Logcheck(cfg ScanConfiguration) error {
+	sc, err := a.getLogCheckScanQueue()
 	if err != nil {
 		return err
 	}
@@ -215,7 +290,7 @@ func Logcheck(store *SQLiteStore, cfg ScanConfiguration) error {
 	bruteResults := bruteForcer(cfg.Concurrency, bruteChan)
 
 	for br := range bruteResults {
-		l := log.New("host", br.host.Hostport, "user", br.cred.User)
+		l := log.New("host", br.hostport, "user", br.cred.User)
 		if br.err != nil {
 			l.Error("Failed to send logcheck auth request", "error", br.err)
 			continue
@@ -225,8 +300,9 @@ func Logcheck(store *SQLiteStore, cfg ScanConfiguration) error {
 	}
 	return nil
 }
-func LogcheckReport(store *SQLiteStore, ls LogSearcher) error {
-	activeHosts, err := store.GetActiveHosts()
+
+func (a *SSHAuditor) LogcheckReport(ls LogSearcher) error {
+	activeHosts, err := a.store.GetActiveHosts(2)
 	if err != nil {
 		return errors.Wrap(err, "LogcheckReport GetActiveHosts failed")
 	}
@@ -255,8 +331,8 @@ func LogcheckReport(store *SQLiteStore, ls LogSearcher) error {
 	return nil
 }
 
-func Vulnerabilities(store *SQLiteStore) error {
-	vulns, err := store.GetVulnerabilities()
+func (a *SSHAuditor) Vulnerabilities() error {
+	vulns, err := a.store.GetVulnerabilities()
 	if err != nil {
 		return errors.Wrap(err, "Vulnerabilities GetVulnerabilities failed")
 	}

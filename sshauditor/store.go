@@ -3,9 +3,7 @@ package sshauditor
 import (
 	"database/sql"
 	"fmt"
-	"net"
 
-	log "github.com/inconshreveable/log15"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -275,7 +273,7 @@ func (s *SQLiteStore) initHostCreds() (int, error) {
 		return 0, errors.Wrap(err, "initHostCreds")
 	}
 
-	knownHosts, err := s.getKnownHosts()
+	knownHosts, err := s.GetActiveHosts(7)
 	if err != nil {
 		return 0, errors.Wrap(err, "initHostCreds")
 	}
@@ -318,7 +316,7 @@ func (s *SQLiteStore) getScanQueueHelper(query string) ([]ScanRequest, error) {
 		sr := requestMap[hc.Hostport]
 		if sr == nil {
 			sr = &ScanRequest{
-				host: Host{Hostport: hc.Hostport},
+				hostport: hc.Hostport,
 			}
 		}
 		sr.credentials = append(sr.credentials, Credential{User: hc.User, Password: hc.Password})
@@ -358,71 +356,8 @@ func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 	_, err := s.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
-		br.result, br.host.Hostport, br.cred.User, br.cred.Password)
+		br.result, br.hostport, br.cred.User, br.cred.Password)
 	return errors.Wrap(err, "updateBruteResult")
-}
-
-func (s *SQLiteStore) duplicateKeyReport() error {
-	hosts := []Host{}
-
-	err := s.Select(&hosts, "SELECT * FROM hosts where fingerprint != ''")
-
-	if err != nil {
-		return errors.Wrap(err, "duplicateKeyReport")
-	}
-
-	keyMap := make(map[string][]Host)
-
-	for _, h := range hosts {
-		keyMap[h.Fingerprint] = append(keyMap[h.Fingerprint], h)
-	}
-
-	for fp, hosts := range keyMap {
-		if len(hosts) == 1 {
-			continue
-		}
-		fmt.Printf("Key %s in use by %d hosts:\n", fp, len(hosts))
-		for _, h := range hosts {
-			fmt.Printf(" %s\n", h.Hostport)
-		}
-		fmt.Println()
-	}
-	return nil
-}
-
-func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
-	requestMap := make(map[string]*ScanRequest)
-	var requests []ScanRequest
-	hostList := []Host{}
-	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-14 day')`
-	err := s.Select(&hostList, query)
-	if err != nil {
-		return requests, errors.Wrap(err, "getLogCheckQueue")
-	}
-
-	for _, h := range hostList {
-		host, _, err := net.SplitHostPort(h.Hostport)
-		if err != nil {
-			log.Warn("bad hostport? %s %s", h.Hostport, err)
-			continue
-		}
-		user := fmt.Sprintf("logcheck-%s", host)
-
-		sr := requestMap[h.Hostport]
-		if sr == nil {
-			sr = &ScanRequest{
-				host: Host{Hostport: h.Hostport},
-			}
-		}
-		sr.credentials = append(sr.credentials, Credential{User: user, Password: "logcheck"})
-		requestMap[h.Hostport] = sr
-	}
-
-	for _, sr := range requestMap {
-		requests = append(requests, *sr)
-	}
-
-	return requests, nil
 }
 
 func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
@@ -439,9 +374,11 @@ func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
 	return creds, errors.Wrap(err, "GetVulnerabilities")
 }
 
-func (s *SQLiteStore) GetActiveHosts() ([]Host, error) {
+//GetActiveHosts returns a list of hosts seen at most maxAgeDays ago
+func (s *SQLiteStore) GetActiveHosts(maxAgeDays int) ([]Host, error) {
 	hostList := []Host{}
-	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-2 day')`
-	err := s.Select(&hostList, query)
+	dayInterval := fmt.Sprintf("-%d day", maxAgeDays)
+	query := `SELECT * FROM hosts WHERE seen_last >= datetime('now', 'localtime', $1)`
+	err := s.Select(&hostList, query, dayInterval)
 	return hostList, errors.Wrap(err, "GetActiveHosts")
 }
