@@ -1,4 +1,7 @@
+[![Build Status](https://travis-ci.org/ncsa/ssh-auditor.svg?branch=master)](https://travis-ci.org/ncsa/ssh-auditor)
+
 # SSH Auditor
+
 
 ## Features
 
