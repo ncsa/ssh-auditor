@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	log "github.com/inconshreveable/log15"
 	"github.com/ncsa/ssh-auditor/sshauditor"
-	"github.com/prometheus/common/log"
 	"github.com/spf13/cobra"
 )
 
