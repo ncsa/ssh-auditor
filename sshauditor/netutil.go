@@ -18,8 +18,8 @@ func ExpandCIDRs(netblocks []string) ([]string, error) {
 		if err != nil {
 			return hosts, err
 		}
-		for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
-			hosts = append(hosts, ip.String())
+		for h := ip.Mask(ipnet.Mask); ipnet.Contains(h); inc(h) {
+			hosts = append(hosts, h.String())
 		}
 	}
 	return hosts, nil
