@@ -331,20 +331,7 @@ func (a *SSHAuditor) LogcheckReport(ls LogSearcher) error {
 	return nil
 }
 
-func (a *SSHAuditor) Vulnerabilities() error {
+func (a *SSHAuditor) Vulnerabilities() ([]Vulnerability, error) {
 	vulns, err := a.store.GetVulnerabilities()
-	if err != nil {
-		return errors.Wrap(err, "Vulnerabilities GetVulnerabilities failed")
-	}
-	for _, v := range vulns {
-		fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n",
-			v.Host.Hostport,
-			v.HostCredential.User,
-			v.HostCredential.Password,
-			v.HostCredential.Result,
-			v.HostCredential.LastTested,
-			v.Host.Version,
-		)
-	}
-	return nil
+	return vulns, errors.Wrap(err, "GetVulnerabilities failed")
 }

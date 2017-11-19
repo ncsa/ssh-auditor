@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/ncsa/ssh-auditor/sshauditor"
@@ -13,10 +14,20 @@ var vulnCmd = &cobra.Command{
 	Short: "Show vulnerabilities",
 	Run: func(cmd *cobra.Command, args []string) {
 		auditor := sshauditor.New(store)
-		err := auditor.Vulnerabilities()
+		vulns, err := auditor.Vulnerabilities()
 		if err != nil {
 			log.Error(err.Error())
 			os.Exit(1)
+		}
+		for _, v := range vulns {
+			fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n",
+				v.Host.Hostport,
+				v.HostCredential.User,
+				v.HostCredential.Password,
+				v.HostCredential.Result,
+				v.HostCredential.LastTested,
+				v.Host.Version,
+			)
 		}
 	},
 }
