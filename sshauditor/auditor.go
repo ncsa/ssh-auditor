@@ -248,9 +248,33 @@ func (a *SSHAuditor) Dupes() (map[string][]Host, error) {
 	}
 	return keyMap, nil
 }
+func (a *SSHAuditor) getLogCheckScanQueue() ([]ScanRequest, error) {
+	var requests []ScanRequest
+	hostList, err := a.store.GetActiveHosts(14)
+	if err != nil {
+		return requests, errors.Wrap(err, "getLogCheckQueue")
+	}
+
+	for _, h := range hostList {
+		host, _, err := net.SplitHostPort(h.Hostport)
+		if err != nil {
+			log.Warn("bad hostport? %s %s", h.Hostport, err)
+			continue
+		}
+		user := fmt.Sprintf("logcheck-%s", host)
+
+		sr := ScanRequest{
+			hostport:    h.Hostport,
+			credentials: []Credential{{User: user, Password: "logcheck"}},
+		}
+		requests = append(requests, sr)
+	}
+
+	return requests, nil
+}
 
 func (a *SSHAuditor) Logcheck(cfg ScanConfiguration) error {
-	sc, err := a.store.getLogCheckQueue()
+	sc, err := a.getLogCheckScanQueue()
 	if err != nil {
 		return err
 	}

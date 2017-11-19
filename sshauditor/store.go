@@ -3,9 +3,7 @@ package sshauditor
 import (
 	"database/sql"
 	"fmt"
-	"net"
 
-	log "github.com/inconshreveable/log15"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -360,41 +358,6 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
 		br.result, br.hostport, br.cred.User, br.cred.Password)
 	return errors.Wrap(err, "updateBruteResult")
-}
-
-func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {
-	requestMap := make(map[string]*ScanRequest)
-	var requests []ScanRequest
-	hostList := []Host{}
-	query := `SELECT * FROM hosts WHERE seen_last > datetime('now', 'localtime', '-14 day')`
-	err := s.Select(&hostList, query)
-	if err != nil {
-		return requests, errors.Wrap(err, "getLogCheckQueue")
-	}
-
-	for _, h := range hostList {
-		host, _, err := net.SplitHostPort(h.Hostport)
-		if err != nil {
-			log.Warn("bad hostport? %s %s", h.Hostport, err)
-			continue
-		}
-		user := fmt.Sprintf("logcheck-%s", host)
-
-		sr := requestMap[h.Hostport]
-		if sr == nil {
-			sr = &ScanRequest{
-				hostport: h.Hostport,
-			}
-		}
-		sr.credentials = append(sr.credentials, Credential{User: user, Password: "logcheck"})
-		requestMap[h.Hostport] = sr
-	}
-
-	for _, sr := range requestMap {
-		requests = append(requests, *sr)
-	}
-
-	return requests, nil
 }
 
 func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
