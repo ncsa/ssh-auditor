@@ -362,16 +362,15 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 	return errors.Wrap(err, "updateBruteResult")
 }
 
-func (s *SQLiteStore) duplicateKeyReport() error {
-	hosts := []Host{}
+func (s *SQLiteStore) DuplicateKeyReport() (map[string][]Host, error) {
+	keyMap := make(map[string][]Host)
 
+	hosts := []Host{}
 	err := s.Select(&hosts, "SELECT * FROM hosts where fingerprint != ''")
 
 	if err != nil {
-		return errors.Wrap(err, "duplicateKeyReport")
+		return keyMap, errors.Wrap(err, "duplicateKeyReport")
 	}
-
-	keyMap := make(map[string][]Host)
 
 	for _, h := range hosts {
 		keyMap[h.Fingerprint] = append(keyMap[h.Fingerprint], h)
@@ -379,15 +378,10 @@ func (s *SQLiteStore) duplicateKeyReport() error {
 
 	for fp, hosts := range keyMap {
 		if len(hosts) == 1 {
-			continue
+			delete(keyMap, fp)
 		}
-		fmt.Printf("Key %s in use by %d hosts:\n", fp, len(hosts))
-		for _, h := range hosts {
-			fmt.Printf(" %s\n", h.Hostport)
-		}
-		fmt.Println()
 	}
-	return nil
+	return keyMap, nil
 }
 
 func (s *SQLiteStore) getLogCheckQueue() ([]ScanRequest, error) {

@@ -228,9 +228,9 @@ func (a *SSHAuditor) Rescan(cfg ScanConfiguration) (AuditResult, error) {
 	return a.brute("rescan", cfg)
 }
 
-func (a *SSHAuditor) Dupes() error {
+func (a *SSHAuditor) Dupes() (map[string][]Host, error) {
 	//FIXME: return DATA here
-	return a.store.duplicateKeyReport()
+	return a.store.DuplicateKeyReport()
 }
 
 func (a *SSHAuditor) Logcheck(cfg ScanConfiguration) error {
