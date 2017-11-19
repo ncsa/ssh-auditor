@@ -148,5 +148,5 @@ func SSHAuthAttempt(hostport, user, password string) (string, error) {
 	if tcpSuccess {
 		return "tunnel", nil
 	}
-	return "", nil
+	return "auth", nil
 }

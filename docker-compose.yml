@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  alpine-sshd-ok:
+    build: testing/docker/alpine-sshd-ok
+  alpine-sshd-test-test:
+    build: testing/docker/alpine-sshd-test-test
+  alpine-sshd-test-test-no-id-binary:
+    build: testing/docker/alpine-sshd-test-test-no-id-binary
+  alpine-sshd-test-test-no-id-binary-no-tunnel:
+    build: testing/docker/alpine-sshd-test-test-no-id-binary-no-tunnel
+  auditor:
+    build: .
+    command: ./ssh-auditor version
+    volumes:
+      - .:/go/src/github.com/ncsa/ssh-auditor
+    depends_on:
+      - alpine-sshd-ok
+      - alpine-sshd-test-test
+      - alpine-sshd-test-test-no-id-binary
+      - alpine-sshd-test-test-no-id-binary-no-tunnel
