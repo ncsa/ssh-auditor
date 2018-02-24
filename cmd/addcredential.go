@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/csv"
 	"os"
+	"strconv"
 
 	log "github.com/inconshreveable/log15"
 
@@ -9,13 +11,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var credentialCmd = &cobra.Command{
+	Use:     "credential",
+	Short:   "manage credentials",
+	Aliases: []string{"cred", "c"},
+}
+
 var scanIntervalDays int
 
-var addcredentialCmd = &cobra.Command{
-	Use:     "addcredential",
-	Aliases: []string{"ac"},
+var credentialAddCmd = &cobra.Command{
+	Use:     "add",
+	Aliases: []string{"addcredential", "ac", "add"},
 	Short:   "add a new credential pair",
-	Example: "addcredential root root123",
+	Example: "add root root123",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
 			cmd.Usage()
@@ -39,8 +47,35 @@ var addcredentialCmd = &cobra.Command{
 		}
 	},
 }
+var credentialListCmd = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"l"},
+	Short:   "list credentials",
+	Run: func(cmd *cobra.Command, args []string) {
+		creds, err := store.GetAllCreds()
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
+		w := csv.NewWriter(os.Stdout)
+		for _, c := range creds {
+			record := []string{c.User, c.Password, strconv.Itoa(c.ScanInterval)}
+			if err := w.Write(record); err != nil {
+				panic(err)
+			}
+		}
+		w.Flush()
+
+		if err := w.Error(); err != nil {
+			panic(err)
+		}
+	},
+}
 
 func init() {
-	addcredentialCmd.Flags().IntVar(&scanIntervalDays, "scan-interval", 14, "How often to re-scan for this credential, in days")
-	RootCmd.AddCommand(addcredentialCmd)
+	credentialAddCmd.Flags().IntVar(&scanIntervalDays, "scan-interval", 14, "How often to re-scan for this credential, in days")
+	RootCmd.AddCommand(credentialAddCmd)
+	RootCmd.AddCommand(credentialCmd)
+	credentialCmd.AddCommand(credentialAddCmd)
+	credentialCmd.AddCommand(credentialListCmd)
 }

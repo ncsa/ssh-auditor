@@ -256,7 +256,7 @@ func (s *SQLiteStore) addHostChanges(new SSHHost, old Host) error {
 	return errors.Wrap(err, "addHostChange")
 }
 
-func (s *SQLiteStore) getAllCreds() ([]Credential, error) {
+func (s *SQLiteStore) GetAllCreds() ([]Credential, error) {
 	credentials := []Credential{}
 	err := s.Select(&credentials, "SELECT * from credentials")
 	return credentials, errors.Wrap(err, "getAllCreds")
@@ -268,7 +268,7 @@ func (s *SQLiteStore) initHostCreds() (int, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "initHostCreds")
 	}
-	creds, err := s.getAllCreds()
+	creds, err := s.GetAllCreds()
 	if err != nil {
 		return 0, errors.Wrap(err, "initHostCreds")
 	}
