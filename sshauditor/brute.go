@@ -38,15 +38,22 @@ func bruteworker(id int, jobs <-chan ScanRequest, results chan<- BruteForceResul
 	}
 }
 
-func bruteForcer(numWorkers int, hosts <-chan ScanRequest) chan BruteForceResult {
+func bruteForcer(numWorkers int, requests []ScanRequest) chan BruteForceResult {
 	var wg sync.WaitGroup
 
+	requestChan := make(chan ScanRequest, numWorkers)
+	go func() {
+		for _, sr := range requests {
+			requestChan <- sr
+		}
+		close(requestChan)
+	}()
 	results := make(chan BruteForceResult, 1000)
 
 	for w := 0; w <= numWorkers; w++ {
 		wg.Add(1)
 		go func() {
-			bruteworker(w, hosts, results)
+			bruteworker(w, requestChan, results)
 			wg.Done()
 		}()
 	}

@@ -178,15 +178,7 @@ func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) (AuditResult,
 		return res, errors.Wrap(err, "brute")
 	}
 
-	bruteChan := make(chan ScanRequest, 1024)
-	go func() {
-		for _, sr := range sc {
-			bruteChan <- sr
-		}
-		close(bruteChan)
-	}()
-
-	bruteResults := bruteForcer(cfg.Concurrency, bruteChan)
+	bruteResults := bruteForcer(cfg.Concurrency, sc)
 
 	var totalCount, errCount, negCount, posCount int
 	for br := range bruteResults {
@@ -279,15 +271,7 @@ func (a *SSHAuditor) Logcheck(cfg ScanConfiguration) error {
 		return err
 	}
 
-	bruteChan := make(chan ScanRequest, 1024)
-	go func() {
-		for _, sr := range sc {
-			bruteChan <- sr
-		}
-		close(bruteChan)
-	}()
-
-	bruteResults := bruteForcer(cfg.Concurrency, bruteChan)
+	bruteResults := bruteForcer(cfg.Concurrency, sc)
 
 	for br := range bruteResults {
 		l := log.New("host", br.hostport, "user", br.cred.User)
