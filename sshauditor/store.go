@@ -71,7 +71,7 @@ type Credential struct {
 }
 
 func (c Credential) String() string {
-	return fmt.Sprintf("%s:%s", c.User, c.Password)
+	return fmt.Sprintf("%s:%s every %d days", c.User, c.Password, c.ScanInterval)
 }
 
 type HostCredential struct {
@@ -180,8 +180,9 @@ func (s *SQLiteStore) AddCredential(c Credential) (bool, error) {
 	}
 	added := affected == 1
 	_, err = s.Exec(
-		"UPDATE credentials SET scan_interval=$3 WHERE user=$1 AND password=$2",
-		c.User, c.Password, c.ScanInterval)
+		"UPDATE credentials SET scan_interval=$1 WHERE user=$2 AND password=$3",
+		c.ScanInterval, c.User, c.Password)
+
 	return added, errors.Wrap(err, "AddCredential")
 }
 
@@ -258,7 +259,7 @@ func (s *SQLiteStore) addHostChanges(new SSHHost, old Host) error {
 
 func (s *SQLiteStore) GetAllCreds() ([]Credential, error) {
 	credentials := []Credential{}
-	err := s.Select(&credentials, "SELECT * from credentials")
+	err := s.Select(&credentials, "SELECT user, password, scan_interval from credentials")
 	return credentials, errors.Wrap(err, "getAllCreds")
 }
 
