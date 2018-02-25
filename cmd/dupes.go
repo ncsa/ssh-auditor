@@ -21,7 +21,11 @@ var dupesCmd = &cobra.Command{
 		}
 		w := json.NewEncoder(os.Stdout)
 		w.SetIndent("", "  ")
-		w.Encode(keyMap)
+		err = w.Encode(keyMap)
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
 		return
 	},
 }
