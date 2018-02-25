@@ -62,7 +62,7 @@ func init() {
 var reportTXTTemplate = `
 Vulnerabilities: {{ .VulnerabilitiesCount }} 
 {{range .Vulnerabilities}}
-	Host {{.Host.HostPort}}
+	Host {{.Host.Hostport}}
 	Version {{.Host.Version}}
 	User {{.HostCredential.User}}
 	Password {{.HostCredential.Password}}
