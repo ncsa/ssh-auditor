@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"os"
@@ -75,6 +76,17 @@ var credentialImportCmd = &cobra.Command{
 var credentialImportTSVCmd = &cobra.Command{
 	Use:   "tsv",
 	Short: "load credentials from TSV",
+	Long: `Load credentials from stdin in the format of
+user	password	scaninterval
+
+or
+user	password
+
+example:
+
+root	root	7
+test	test
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		reader := csv.NewReader(os.Stdin)
 		reader.Comma = '\t'
@@ -83,6 +95,8 @@ var credentialImportTSVCmd = &cobra.Command{
 			log.Error(err.Error())
 			os.Exit(1)
 		}
+		store.Begin()
+		defer store.Commit()
 
 		for _, r := range records {
 			var si int
@@ -119,6 +133,40 @@ var credentialImportTSVCmd = &cobra.Command{
 		}
 	},
 }
+var credentialImportJSONCmd = &cobra.Command{
+	Use:   "json",
+	Short: "load credentials from JSON",
+	Long: `Load credentials from stdin in the format of
+{"User":"root","Password":"root","ScanInterval":7}
+{"User":"test","Password":"test"}
+`,
+	Run: func(cmd *cobra.Command, args []string) {
+		store.Begin()
+		defer store.Commit()
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			var cred sshauditor.Credential
+			json.Unmarshal(scanner.Bytes(), &cred)
+			if cred.ScanInterval == 0 {
+				cred.ScanInterval = scanIntervalDays
+			}
+			l := log.New("user", cred.User, "password", cred.Password, "interval", cred.ScanInterval)
+			added, err := store.AddCredential(cred)
+			if err != nil {
+				log.Error(err.Error())
+				os.Exit(1)
+			}
+			if added {
+				l.Info("added credential")
+			} else {
+				l.Info("updated credential")
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			log.Error("error reading standard input", "err", err)
+		}
+	},
+}
 
 func init() {
 	credentialAddCmd.Flags().IntVar(&scanIntervalDays, "scan-interval", 14, "How often to re-scan for this credential, in days")
@@ -128,4 +176,5 @@ func init() {
 	credentialCmd.AddCommand(credentialListCmd)
 	credentialCmd.AddCommand(credentialImportCmd)
 	credentialImportCmd.AddCommand(credentialImportTSVCmd)
+	credentialImportCmd.AddCommand(credentialImportJSONCmd)
 }
