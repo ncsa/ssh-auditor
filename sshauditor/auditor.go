@@ -22,6 +22,16 @@ type AuditResult struct {
 	posCount   int
 	errCount   int
 }
+type AuditReport struct {
+	ActiveHosts      []Host
+	ActiveHostsCount int
+
+	DuplicateKeys      map[string][]Host
+	DuplicateKeysCount int
+
+	Vulnerabilities      []Vulnerability
+	VulnerabilitiesCount int
+}
 
 func joinInts(ints []int, sep string) string {
 	var foo []string
@@ -318,4 +328,30 @@ func (a *SSHAuditor) LogcheckReport(ls LogSearcher) error {
 func (a *SSHAuditor) Vulnerabilities() ([]Vulnerability, error) {
 	vulns, err := a.store.GetVulnerabilities()
 	return vulns, errors.Wrap(err, "GetVulnerabilities failed")
+}
+
+func (a *SSHAuditor) GetReport() (AuditReport, error) {
+	var rep AuditReport
+	hosts, err := a.store.GetActiveHosts(2)
+	rep.ActiveHosts = hosts
+	rep.ActiveHostsCount = len(hosts)
+	if err != nil {
+		return rep, err
+	}
+
+	dupes, err := a.Dupes()
+	if err != nil {
+		return rep, err
+	}
+	rep.DuplicateKeys = dupes
+	rep.DuplicateKeysCount = len(dupes)
+
+	vulns, err := a.Vulnerabilities()
+	if err != nil {
+		return rep, err
+	}
+	rep.Vulnerabilities = vulns
+	rep.VulnerabilitiesCount = len(vulns)
+
+	return rep, nil
 }
