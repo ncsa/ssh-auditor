@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"os"
+	"strconv"
 
 	log "github.com/inconshreveable/log15"
 
@@ -65,10 +67,65 @@ var credentialListCmd = &cobra.Command{
 	},
 }
 
+var credentialImportCmd = &cobra.Command{
+	Use:   "import",
+	Short: "load credentials from TSV or JSON",
+}
+
+var credentialImportTSVCmd = &cobra.Command{
+	Use:   "tsv",
+	Short: "load credentials from TSV",
+	Run: func(cmd *cobra.Command, args []string) {
+		reader := csv.NewReader(os.Stdin)
+		reader.Comma = '\t'
+		records, err := reader.ReadAll()
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
+
+		for _, r := range records {
+			var si int
+			if len(r) != 2 && len(r) != 3 {
+				log.Error("Invalid record", "rec", r)
+				continue
+			}
+			if len(r) == 3 {
+				si, err = strconv.Atoi(r[2])
+				if err != nil {
+					log.Error("Invalid record", "rec", r, "err", err)
+					continue
+				}
+			} else {
+				si = scanIntervalDays
+			}
+
+			cred := sshauditor.Credential{
+				User:         r[0],
+				Password:     r[1],
+				ScanInterval: si,
+			}
+			l := log.New("user", cred.User, "password", cred.Password, "interval", si)
+			added, err := store.AddCredential(cred)
+			if err != nil {
+				log.Error(err.Error())
+				os.Exit(1)
+			}
+			if added {
+				l.Info("added credential")
+			} else {
+				l.Info("updated credential")
+			}
+		}
+	},
+}
+
 func init() {
 	credentialAddCmd.Flags().IntVar(&scanIntervalDays, "scan-interval", 14, "How often to re-scan for this credential, in days")
 	RootCmd.AddCommand(credentialAddCmd)
 	RootCmd.AddCommand(credentialCmd)
 	credentialCmd.AddCommand(credentialAddCmd)
 	credentialCmd.AddCommand(credentialListCmd)
+	credentialCmd.AddCommand(credentialImportCmd)
+	credentialImportCmd.AddCommand(credentialImportTSVCmd)
 }
