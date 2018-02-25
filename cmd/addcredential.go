@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"encoding/csv"
+	"encoding/json"
 	"os"
-	"strconv"
 
 	log "github.com/inconshreveable/log15"
 
@@ -57,17 +56,11 @@ var credentialListCmd = &cobra.Command{
 			log.Error(err.Error())
 			os.Exit(1)
 		}
-		w := csv.NewWriter(os.Stdout)
+		w := json.NewEncoder(os.Stdout)
 		for _, c := range creds {
-			record := []string{c.User, c.Password, strconv.Itoa(c.ScanInterval)}
-			if err := w.Write(record); err != nil {
+			if err := w.Encode(c); err != nil {
 				panic(err)
 			}
-		}
-		w.Flush()
-
-		if err := w.Error(); err != nil {
-			panic(err)
 		}
 	},
 }

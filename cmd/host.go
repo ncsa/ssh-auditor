@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"encoding/csv"
+	"encoding/json"
 	"os"
 
 	log "github.com/inconshreveable/log15"
@@ -27,17 +27,11 @@ var hostListCmd = &cobra.Command{
 			log.Error(err.Error())
 			os.Exit(1)
 		}
-		w := csv.NewWriter(os.Stdout)
+		w := json.NewEncoder(os.Stdout)
 		for _, c := range hosts {
-			record := []string{c.Hostport, c.Version, c.Fingerprint, c.SeenFirst, c.SeenLast}
-			if err := w.Write(record); err != nil {
+			if err := w.Encode(c); err != nil {
 				panic(err)
 			}
-		}
-		w.Flush()
-
-		if err := w.Error(); err != nil {
-			panic(err)
 		}
 	},
 }
