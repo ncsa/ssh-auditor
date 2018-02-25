@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"fmt"
+	"encoding/json"
 	"os"
 
 	log "github.com/inconshreveable/log15"
@@ -19,13 +19,9 @@ var dupesCmd = &cobra.Command{
 			log.Error(err.Error())
 			os.Exit(1)
 		}
-		for fp, hosts := range keyMap {
-			fmt.Printf("Key %s in use by %d hosts:\n", fp, len(hosts))
-			for _, h := range hosts {
-				fmt.Printf(" %s\t%s\t%s\t%s\n", h.Hostport, h.SeenFirst, h.SeenLast, h.Version)
-			}
-			fmt.Println()
-		}
+		w := json.NewEncoder(os.Stdout)
+		w.SetIndent("", "  ")
+		w.Encode(keyMap)
 		return
 	},
 }
