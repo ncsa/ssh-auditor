@@ -1,0 +1,54 @@
+project_name: ssh-auditor
+release:
+  github:
+    owner: ncsa
+    name: ssh-auditor
+  name_template: '{{.Tag}}'
+builds:
+- goos:
+  - linux
+  goarch:
+  - amd64
+  goarm:
+  - "6"
+  main: .
+  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+  binary: ssh-auditor
+archive:
+  format: tar.gz
+  name_template: '{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{
+    .Arm }}{{ end }}'
+  files:
+  - licence*
+  - LICENCE*
+  - license*
+  - LICENSE*
+  - readme*
+  - README*
+  - changelog*
+  - CHANGELOG*
+snapshot:
+  name_template: SNAPSHOT-{{ .Commit }}
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+nfpm:
+  description: scan for weak ssh passwords on your network
+  license: University of Illinois/NCSA Open Source License (NCSA)
+  name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+  bindir: /usr/bin
+  homepage: https://github.com/ncsa/ssh-auditor
+  maintainer: Justin Azoff <jazoff@illinois.edu>
+  formats:
+    - deb
+    - rpm
+sign:
+  cmd: gpg
+  args:
+  - --output
+  - $signature
+  - --detach-sig
+  - $artifact
+  signature: ${artifact}.sig
+  artifacts: none
+env_files:
+  github_token: ~/.config/goreleaser/github_token
