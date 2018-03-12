@@ -12,7 +12,7 @@ builds:
   goarm:
   - "6"
   main: .
-  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -extldflags "-static"
   binary: ssh-auditor
 archive:
   format: tar.gz
