@@ -11,11 +11,5 @@ static:
 	go build --ldflags '-extldflags "-static"'
 
 .PHONY: rpm
-rpm: static
-rpm: VERSION=$(shell ./ssh-auditor version)
 rpm:
-	fpm -f -s dir -t rpm -n ssh-auditor -v $(VERSION) \
-	--iteration=1 \
-	--architecture native \
-	--description "SSH Auditor" \
-	./ssh-auditor=/usr/bin/
+	goreleaser --skip-publish
