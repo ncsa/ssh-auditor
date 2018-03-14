@@ -1,10 +1,12 @@
 package sshauditor
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/inconshreveable/log15"
 	"github.com/pkg/errors"
@@ -80,55 +82,68 @@ func New(store *SQLiteStore) *SSHAuditor {
 }
 
 func (a *SSHAuditor) updateStoreFromDiscovery(hosts chan SSHHost) error {
-	_, err := a.store.Begin()
-	defer a.store.Commit()
-	if err != nil {
-		return errors.Wrap(err, "updateStoreFromDiscovery")
-	}
-
 	knownHosts, err := a.store.getKnownHosts()
 	if err != nil {
 		return err
 	}
 	log.Info("current known hosts", "count", len(knownHosts))
 	var totalCount, updatedCount, newCount int
-	for host := range hosts {
-		var needUpdate bool
-		rec, existing := knownHosts[host.hostport]
-		if existing {
-			if host.keyfp == "" {
-				host.keyfp = rec.Fingerprint
+
+	hostsWrapped := make(chan interface{})
+	go func() {
+		for v := range hosts {
+			hostsWrapped <- v
+		}
+		close(hostsWrapped)
+	}()
+	for hostBatch := range batch(context.TODO(), hostsWrapped, 50, 2*time.Second) {
+		_, err := a.store.Begin()
+		if err != nil {
+			return errors.Wrap(err, "updateStoreFromDiscovery")
+		}
+		for _, host := range hostBatch {
+			host := host.(SSHHost)
+			var needUpdate bool
+			rec, existing := knownHosts[host.hostport]
+			if existing {
+				if host.keyfp == "" {
+					host.keyfp = rec.Fingerprint
+				}
+				if host.version == "" {
+					host.version = rec.Version
+				}
+				needUpdate = (host.keyfp != rec.Fingerprint || host.version != rec.Version)
+				err := a.store.addHostChanges(host, rec)
+				if err != nil {
+					return errors.Wrap(err, "updateStoreFromDiscovery")
+				}
 			}
-			if host.version == "" {
-				host.version = rec.Version
+			l := log.New("host", host.hostport, "version", host.version, "fp", host.keyfp)
+			if !existing || needUpdate {
+				err = a.store.addOrUpdateHost(host)
+				if err != nil {
+					return errors.Wrap(err, "updateStoreFromDiscovery")
+				}
 			}
-			needUpdate = (host.keyfp != rec.Fingerprint || host.version != rec.Version)
-			err := a.store.addHostChanges(host, rec)
-			if err != nil {
-				return errors.Wrap(err, "updateStoreFromDiscovery")
+			//If it already existed and we didn't otherwise update it, mark that it was seen
+			if existing {
+				err = a.store.setLastSeen(host)
+				if err != nil {
+					return errors.Wrap(err, "updateStoreFromDiscovery")
+				}
+			}
+			totalCount++
+			if !existing {
+				l.Info("discovered new host")
+				newCount++
+			} else if needUpdate {
+				l.Info("discovered changed host")
+				updatedCount++
 			}
 		}
-		l := log.New("host", host.hostport, "version", host.version, "fp", host.keyfp)
-		if !existing || needUpdate {
-			err = a.store.addOrUpdateHost(host)
-			if err != nil {
-				return errors.Wrap(err, "updateStoreFromDiscovery")
-			}
-		}
-		//If it already existed and we didn't otherwise update it, mark that it was seen
-		if existing {
-			err = a.store.setLastSeen(host)
-			if err != nil {
-				return errors.Wrap(err, "updateStoreFromDiscovery")
-			}
-		}
-		totalCount++
-		if !existing {
-			l.Info("discovered new host")
-			newCount++
-		} else if needUpdate {
-			l.Info("discovered changed host")
-			updatedCount++
+		err = a.store.Commit()
+		if err != nil {
+			return errors.Wrap(err, "updateStoreFromDiscovery")
 		}
 	}
 	log.Info("discovery report", "total", totalCount, "new", newCount, "updated", updatedCount)
@@ -182,37 +197,51 @@ func (a *SSHAuditor) brute(scantype string, cfg ScanConfiguration) (AuditResult,
 	if err != nil {
 		return res, errors.Wrap(err, "Error getting scan queue")
 	}
-	_, err = a.store.Begin()
-	defer a.store.Commit()
-	if err != nil {
-		return res, errors.Wrap(err, "brute")
-	}
-
 	bruteResults := bruteForcer(cfg.Concurrency, sc)
 
+	bruteResultsWrapped := make(chan interface{})
+	go func() {
+		for v := range bruteResults {
+			bruteResultsWrapped <- v
+		}
+		close(bruteResultsWrapped)
+	}()
+
 	var totalCount, errCount, negCount, posCount int
-	for br := range bruteResults {
-		l := log.New(
-			"host", br.hostport,
-			"user", br.cred.User,
-			"password", br.cred.Password,
-			"result", br.result,
-		)
-		if br.err != nil {
-			l.Error("brute force error", "err", br.err.Error())
-			errCount++
-		} else if br.result == "" {
-			l.Debug("negative brute force result")
-			negCount++
-		} else {
-			l.Info("positive brute force result")
-			posCount++
-		}
-		err = a.store.updateBruteResult(br)
+	for bruteBatch := range batch(context.TODO(), bruteResultsWrapped, 50, 2*time.Second) {
+		_, err = a.store.Begin()
 		if err != nil {
-			return res, err
+			return res, errors.Wrap(err, "brute")
 		}
-		totalCount++
+
+		for _, br := range bruteBatch {
+			br := br.(BruteForceResult)
+			l := log.New(
+				"host", br.hostport,
+				"user", br.cred.User,
+				"password", br.cred.Password,
+				"result", br.result,
+			)
+			if br.err != nil {
+				l.Error("brute force error", "err", br.err.Error())
+				errCount++
+			} else if br.result == "" {
+				l.Debug("negative brute force result")
+				negCount++
+			} else {
+				l.Info("positive brute force result")
+				posCount++
+			}
+			err = a.store.updateBruteResult(br)
+			if err != nil {
+				return res, err
+			}
+			totalCount++
+		}
+		err = a.store.Commit()
+		if err != nil {
+			return res, errors.Wrap(err, "brute")
+		}
 	}
 	log.Info("brute force scan report", "total", totalCount, "neg", negCount, "pos", posCount, "err", errCount)
 	return AuditResult{
