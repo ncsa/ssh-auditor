@@ -14,7 +14,7 @@ type BruteForceResult struct {
 	result   string
 }
 
-func bruteworker(id int, jobs <-chan ScanRequest, results chan<- BruteForceResult) {
+func bruteworker(jobs <-chan ScanRequest, results chan<- BruteForceResult) {
 	for sr := range jobs {
 		failures := 0
 		for _, cred := range sr.credentials {
@@ -53,7 +53,7 @@ func bruteForcer(numWorkers int, requests []ScanRequest) chan BruteForceResult {
 	for w := 0; w <= numWorkers; w++ {
 		wg.Add(1)
 		go func() {
-			bruteworker(w, requestChan, results)
+			bruteworker(requestChan, results)
 			wg.Done()
 		}()
 	}

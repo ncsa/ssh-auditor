@@ -109,7 +109,7 @@ func SSHDialAttempt(client *ssh.Client, dest string) bool {
 func challengeReponder(password string) ssh.KeyboardInteractiveChallenge {
 	return func(user, instruction string, questions []string, echos []bool) ([]string, error) {
 		answers := make([]string, len(questions))
-		for i, _ := range answers {
+		for i := range answers {
 			answers[i] = password
 		}
 		return answers, nil

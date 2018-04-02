@@ -8,7 +8,7 @@ type SSHHost struct {
 	keyfp    string
 }
 
-func keyworker(id int, jobs <-chan ScanResult, results chan<- SSHHost) {
+func keyworker(jobs <-chan ScanResult, results chan<- SSHHost) {
 	for host := range jobs {
 		if !host.success {
 			continue
@@ -30,7 +30,7 @@ func fingerPrintFetcher(numWorkers int, scanResults <-chan ScanResult) chan SSHH
 	for w := 0; w <= numWorkers; w++ {
 		wg.Add(1)
 		go func() {
-			keyworker(w, scanResults, results)
+			keyworker(scanResults, results)
 			wg.Done()
 		}()
 	}

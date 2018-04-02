@@ -2,7 +2,7 @@ package sshauditor
 
 import "sync"
 
-func bannerWorker(id int, jobs <-chan string, results chan<- ScanResult) {
+func bannerWorker(jobs <-chan string, results chan<- ScanResult) {
 	for host := range jobs {
 		results <- ScanPort(host)
 	}
@@ -16,7 +16,7 @@ func bannerFetcher(numWorkers int, hostports <-chan string) chan ScanResult {
 	for w := 0; w <= numWorkers; w++ {
 		wg.Add(1)
 		go func() {
-			bannerWorker(w, hostports, results)
+			bannerWorker(hostports, results)
 			wg.Done()
 		}()
 	}
