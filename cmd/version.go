@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	Version = "0.10"
+	version = "dev"
 )
 
 var versionCmd = &cobra.Command{
@@ -17,7 +17,7 @@ var versionCmd = &cobra.Command{
 	PersistentPreRunE:  func(cmd *cobra.Command, args []string) error { return nil },
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error { return nil },
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(Version)
+		fmt.Println(version)
 	},
 }
 

@@ -12,7 +12,7 @@ builds:
   goarm:
   - "6"
   main: .
-  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -extldflags "-static"
+  ldflags: -s -w -X github.com/ncsa/ssh-auditor/cmd.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -extldflags "-static"
   binary: ssh-auditor
 archive:
   wrap_in_directory: true
