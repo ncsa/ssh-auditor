@@ -355,8 +355,7 @@ func (a *SSHAuditor) LogcheckReport(ls LogSearcher) error {
 }
 
 func (a *SSHAuditor) Vulnerabilities() ([]Vulnerability, error) {
-	vulns, err := a.store.GetVulnerabilities()
-	return vulns, errors.Wrap(err, "GetVulnerabilities failed")
+	return a.store.GetVulnerabilities()
 }
 
 func (a *SSHAuditor) GetReport() (AuditReport, error) {

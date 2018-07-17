@@ -24,6 +24,10 @@ var reportJSONCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		auditor := sshauditor.New(store)
 		report, err := auditor.GetReport()
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
 		w := json.NewEncoder(os.Stdout)
 		w.SetIndent("", "  ")
 		err = w.Encode(report)

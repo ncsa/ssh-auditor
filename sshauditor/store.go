@@ -75,7 +75,7 @@ func (c Credential) String() string {
 }
 
 type HostCredential struct {
-	Hostport     string
+	Hostport     string `json:"-"`
 	User         string
 	Password     string
 	LastTested   string `db:"last_tested"`
@@ -85,7 +85,7 @@ type HostCredential struct {
 
 type Vulnerability struct {
 	HostCredential
-	Host
+	Host `db:"host"`
 }
 
 type SQLiteStore struct {
@@ -364,7 +364,9 @@ func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
 func (s *SQLiteStore) GetVulnerabilities() ([]Vulnerability, error) {
 	creds := []Vulnerability{}
 	q := `select
-			hc.hostport, hc.user, hc.password, hc.result, hc.last_tested, h.version
+			hc.hostport, hc.user, hc.password, hc.result, hc.last_tested,
+			h.version "host.version", h.hostport "host.hostport",
+			h.seen_first "host.seen_first", h.seen_last "host.seen_last", h.fingerprint "host.fingerprint"
 		from
 			host_creds hc, hosts h
 		where
