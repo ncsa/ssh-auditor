@@ -52,8 +52,8 @@ PRAGMA writable_schema=1;
 UPDATE sqlite_master SET SQL=REPLACE(SQL, 'priority', 'scan_interval') WHERE name='host_creds';
 UPDATE sqlite_master SET SQL=REPLACE(SQL, 'priority', 'scan_interval') WHERE name='credentials';
 PRAGMA writable_schema=0;
-UPDATE credentials set scan_interval=14 where scan_interval == 0;
-UPDATE host_creds set scan_interval=14 where scan_interval == 0;
+-- UPDATE credentials set scan_interval=14 where scan_interval == 0;
+-- UPDATE host_creds set scan_interval=14 where scan_interval == 0;
 CREATE INDEX IF NOT EXISTS host_creds_vulnerable ON host_creds (result) WHERE result != '';
 `
 
