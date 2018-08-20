@@ -24,6 +24,20 @@ var scanCmd = &cobra.Command{
 	},
 }
 
+var scanResetIntervalCmd = &cobra.Command{
+	Use:     "reset",
+	Aliases: []string{"r"},
+	Short:   "reset interval",
+	Run: func(cmd *cobra.Command, args []string) {
+		err := store.ResetInterval()
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
+	},
+}
+
 func init() {
 	RootCmd.AddCommand(scanCmd)
+	scanCmd.AddCommand(scanResetIntervalCmd)
 }
