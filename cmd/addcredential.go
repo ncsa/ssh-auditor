@@ -68,6 +68,19 @@ var credentialListCmd = &cobra.Command{
 	},
 }
 
+var credentialResetCmd = &cobra.Command{
+	Use:     "reset",
+	Aliases: []string{"c"},
+	Short:   "reset credential list",
+	Run: func(cmd *cobra.Command, args []string) {
+		err := store.ResetCreds()
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
+	},
+}
+
 var credentialImportCmd = &cobra.Command{
 	Use:   "import",
 	Short: "load credentials from TSV or JSON",
@@ -174,6 +187,7 @@ func init() {
 	RootCmd.AddCommand(credentialCmd)
 	credentialCmd.AddCommand(credentialAddCmd)
 	credentialCmd.AddCommand(credentialListCmd)
+	credentialCmd.AddCommand(credentialResetCmd)
 	credentialCmd.AddCommand(credentialImportCmd)
 	credentialImportCmd.AddCommand(credentialImportTSVCmd)
 	credentialImportCmd.AddCommand(credentialImportJSONCmd)

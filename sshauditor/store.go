@@ -212,6 +212,15 @@ func (s *SQLiteStore) ResetInterval() error {
 	return err
 }
 
+func (s *SQLiteStore) ResetCreds() error {
+	_, err := s.Exec("DELETE from host_creds")
+	if err != nil {
+		return err
+	}
+	_, err = s.Exec("DELETE from credentials")
+	return err
+}
+
 func (s *SQLiteStore) addOrUpdateHost(h SSHHost) error {
 	err := s.resetHostCreds(h)
 	if err != nil {
