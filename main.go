@@ -9,9 +9,7 @@ import (
 
 func main() {
 	if err := cmd.RootCmd.Execute(); err != nil {
-		if err != nil {
-			log.Error(err.Error())
-			os.Exit(1)
-		}
+		log.Error(err.Error())
+		os.Exit(1)
 	}
 }
