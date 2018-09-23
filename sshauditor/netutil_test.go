@@ -12,6 +12,7 @@ var testCases = []struct {
 	{[]string{"192.168.1.0/24"}, []string{"192.168.1.30/32"}, 255, false},
 	{[]string{"192.168.1.0/24"}, []string{"192.168.1.30/30"}, 252, false},
 	{[]string{"192.168.1.0/33"}, []string{}, 0, true},
+	{[]string{"192.168.1.1"}, []string{}, 1, false},
 }
 
 func TestEnumerateHosts(t *testing.T) {

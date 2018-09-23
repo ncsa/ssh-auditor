@@ -1,6 +1,9 @@
 package sshauditor
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 func inc(ip net.IP) {
 	for j := len(ip) - 1; j >= 0; j-- {
@@ -14,6 +17,11 @@ func inc(ip net.IP) {
 func ExpandCIDRs(netblocks []string) ([]string, error) {
 	var hosts []string
 	for _, netblock := range netblocks {
+		//If there's no slash, just treat as a single host
+		if !strings.ContainsRune(netblock, '/') {
+			hosts = append(hosts, netblock)
+			continue
+		}
 		ip, ipnet, err := net.ParseCIDR(netblock)
 		if err != nil {
 			return hosts, err
