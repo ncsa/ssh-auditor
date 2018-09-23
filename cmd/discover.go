@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"os"
 
 	log "github.com/inconshreveable/log15"
@@ -36,8 +37,35 @@ var discoverCmd = &cobra.Command{
 	},
 }
 
+var discoverFromFileCmd = &cobra.Command{
+	Use:     "fromfile",
+	Example: "fromfile -p 22 hosts.txt",
+	Short:   "discover new hosts using a list of hosts from stdin",
+	Run: func(cmd *cobra.Command, args []string) {
+		scanner := bufio.NewScanner(os.Stdin)
+		scanConfig := sshauditor.ScanConfiguration{
+			Concurrency: concurrency,
+			Include:     []string{},
+			Ports:       ports,
+		}
+		for scanner.Scan() {
+			host := scanner.Text()
+			scanConfig.Include = append(scanConfig.Include, host)
+		}
+		auditor := sshauditor.New(store)
+		err := auditor.Discover(scanConfig)
+		if err != nil {
+			log.Error(err.Error())
+			os.Exit(1)
+		}
+	},
+}
+
 func init() {
 	discoverCmd.Flags().IntSliceVarP(&ports, "ports", "p", []int{22}, "ports to check during initial discovery")
 	discoverCmd.Flags().StringSliceVarP(&exclude, "exclude", "x", []string{}, "subnets to exclude from discovery")
+
+	discoverFromFileCmd.Flags().IntSliceVarP(&ports, "ports", "p", []int{22}, "ports to check during initial discovery")
 	RootCmd.AddCommand(discoverCmd)
+	discoverCmd.AddCommand(discoverFromFileCmd)
 }
