@@ -27,6 +27,13 @@ var authTestCases = []struct {
 		false,
 	},
 	{
+		"alpine-sshd-test-blank:22",
+		"test",
+		"",
+		"exec",
+		false,
+	},
+	{
 		"alpine-sshd-test-test-no-id-binary:22",
 		"test",
 		"test",
