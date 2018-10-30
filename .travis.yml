@@ -10,8 +10,8 @@ services:
   - docker
 
 script:
+  - make all
   - make e2e-test
-
 
 # calls goreleaser
 deploy:
