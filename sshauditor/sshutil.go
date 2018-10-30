@@ -26,6 +26,12 @@ func isFalsePositiveBanner(output string) bool {
 	return false
 }
 
+//isPrivateKey returns true if the passed string is a ssh private key instead
+//of a password
+func isPrivateKey(s string) bool {
+	return strings.HasPrefix(s, "-----BEGIN")
+}
+
 //DialWithDeadline is identical to ssh.Dial except that it calls SetDeadline on
 //the underlying connection
 func DialWithDeadline(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
@@ -116,13 +122,32 @@ func challengeReponder(password string) ssh.KeyboardInteractiveChallenge {
 	}
 }
 
+func genAuthMethod(password string) ([]ssh.AuthMethod, error) {
+	if isPrivateKey(password) {
+		signer, err := ssh.ParsePrivateKey([]byte(password))
+		if err != nil {
+			return []ssh.AuthMethod{}, err
+		}
+
+		return []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		}, nil
+
+	}
+	return []ssh.AuthMethod{
+		ssh.Password(password),
+		ssh.KeyboardInteractive(challengeReponder(password)),
+	}, nil
+}
+
 func SSHAuthAttempt(hostport, user, password string) (string, error) {
+	authMethods, err := genAuthMethod(password)
+	if err != nil {
+		return "", err
+	}
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-			ssh.KeyboardInteractive(challengeReponder(password)),
-		},
+		User:            user,
+		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         4 * time.Second,
 		ClientVersion:   "SSH-2.0-Go-ssh-auditor",

@@ -92,7 +92,7 @@ func TestSSHAuditorE2E(t *testing.T) {
 					t.Errorf("negCount != 0: %#v", ar.negCount)
 				}
 				if len(vulns) != 1 {
-					t.Errorf("len(vulns) != 1: %#v", vulns)
+					t.Fatalf("len(vulns) != 1: %#v", vulns)
 				}
 				if vulns[0].Host.Hostport != ipport {
 					t.Errorf("vuln[0].hostport != %#v: %#v", ipport, vulns)

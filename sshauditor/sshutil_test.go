@@ -2,16 +2,20 @@ package sshauditor
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"testing"
 )
 
-var authTestCases = []struct {
+type authTestCase struct {
 	hostport string
 	user     string
 	password string
 	expected string
 	wanterr  bool
-}{
+}
+
+var authTestCases = []authTestCase{
 	{
 		"alpine-sshd-ok:22",
 		"root",
@@ -47,6 +51,22 @@ var authTestCases = []struct {
 		"auth",
 		false,
 	},
+}
+
+func init() {
+	key, err := ioutil.ReadFile("../testing/docker/alpine-sshd-test-key/test.key")
+	if err != nil {
+		log.Printf("Can't read test key: %v", err)
+		return
+	}
+	//log.Printf("Using key %v", key)
+	authTestCases = append(authTestCases, authTestCase{
+		hostport: "alpine-sshd-test-key:22",
+		user:     "test",
+		password: string(key),
+		expected: "exec",
+		wanterr:  false,
+	})
 }
 
 func TestSSHAuthAttempt(t *testing.T) {

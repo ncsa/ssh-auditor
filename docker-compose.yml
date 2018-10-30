@@ -5,6 +5,8 @@ services:
     build: testing/docker/alpine-sshd-ok
   alpine-sshd-test-test:
     build: testing/docker/alpine-sshd-test-test
+  alpine-sshd-test-key:
+    build: testing/docker/alpine-sshd-test-key
   alpine-sshd-test-blank:
     build: testing/docker/alpine-sshd-test-blank
   alpine-sshd-test-test-no-id-binary:
@@ -19,6 +21,7 @@ services:
     depends_on:
       - alpine-sshd-ok
       - alpine-sshd-test-test
+      - alpine-sshd-test-key
       - alpine-sshd-test-blank
       - alpine-sshd-test-test-no-id-binary
       - alpine-sshd-test-test-no-id-binary-no-tunnel
