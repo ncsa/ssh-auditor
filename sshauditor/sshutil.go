@@ -104,12 +104,27 @@ func SSHExecAttempt(client *ssh.Client, hostport string) bool {
 }
 
 func SSHDialAttempt(client *ssh.Client, dest string) bool {
+	//If there was no error, the dial worked and this is vulnerable!
 	conn, err := client.Dial("tcp", dest)
 	if err == nil {
 		conn.Close()
+		return true
 	}
-	//If there was no error, the dial worked and this is vulnerable!
-	return err == nil
+	//It may only allow local forwarding, so try replacing the ip with localhost
+	log.Error("tunnel attempt failed", "error", err)
+	_, port, err := net.SplitHostPort(dest)
+	if err != nil {
+		log.Error("Invalid host port in SSHDialAttempt, should not happen", "error", err)
+		return false
+	}
+	newDest := fmt.Sprintf("127.0.0.1:%s", port)
+	conn, err = client.Dial("tcp", newDest)
+	if err == nil {
+		conn.Close()
+		return true
+	}
+	log.Error("tunnel attempt failed", "error", err)
+	return false
 }
 
 func challengeReponder(password string) ssh.KeyboardInteractiveChallenge {

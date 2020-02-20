@@ -45,6 +45,13 @@ var authTestCases = []authTestCase{
 		false,
 	},
 	{
+		"alpine-sshd-test-test-no-id-binary-tunnel-local:22",
+		"test",
+		"test",
+		"tunnel",
+		false,
+	},
+	{
 		"alpine-sshd-test-test-no-id-binary-no-tunnel:22",
 		"test",
 		"test",

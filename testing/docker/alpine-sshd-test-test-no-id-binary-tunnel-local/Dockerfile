@@ -6,4 +6,4 @@ RUN echo -e "test\ntest"|adduser test
 RUN rm /usr/bin/id
 ADD sshd_config /etc/ssh/sshd_config
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-Ddd"]
+CMD ["/usr/sbin/sshd", "-D"]

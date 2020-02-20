@@ -1,0 +1,5 @@
+.dockerignore
+testing/docker/*/Dockerfile
+testing/docker/*/sshd_config
+*.sqlite
+ssh-auditor

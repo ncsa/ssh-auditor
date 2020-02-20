@@ -11,6 +11,8 @@ services:
     build: testing/docker/alpine-sshd-test-blank
   alpine-sshd-test-test-no-id-binary:
     build: testing/docker/alpine-sshd-test-test-no-id-binary
+  alpine-sshd-test-test-no-id-binary-tunnel-local:
+    build: testing/docker/alpine-sshd-test-test-no-id-binary-tunnel-local
   alpine-sshd-test-test-no-id-binary-no-tunnel:
     build: testing/docker/alpine-sshd-test-test-no-id-binary-no-tunnel
   auditor:
@@ -24,4 +26,5 @@ services:
       - alpine-sshd-test-key
       - alpine-sshd-test-blank
       - alpine-sshd-test-test-no-id-binary
+      - alpine-sshd-test-test-no-id-binary-tunnel-local
       - alpine-sshd-test-test-no-id-binary-no-tunnel
