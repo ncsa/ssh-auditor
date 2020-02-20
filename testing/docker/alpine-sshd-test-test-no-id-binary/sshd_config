@@ -1,5 +1,5 @@
 AuthorizedKeysFile	.ssh/authorized_keys
-AllowTcpForwarding local
+AllowTcpForwarding all
 DisableForwarding no
 GatewayPorts no
 X11Forwarding no
