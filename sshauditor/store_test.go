@@ -47,3 +47,39 @@ func TestAddCredential(t *testing.T) {
 	}
 
 }
+
+func TestAddAndDeleteHost(t *testing.T) {
+	check := func(e error) {
+		if e != nil {
+			t.Fatal(e)
+		}
+	}
+	s, err := NewSQLiteStore(":memory:")
+	check(err)
+	err = s.Init()
+	check(err)
+
+	s.addOrUpdateHost(SSHHost{
+		hostport: "192.168.1.1:22",
+		version:  "whatever",
+		keyfp:    "whatever",
+	})
+	knownHosts, err := s.GetActiveHosts(7)
+	check(err)
+	if knownHosts[0].Hostport != "192.168.1.1:22" {
+		knownHosts, err := s.GetActiveHosts(7)
+		check(err)
+		if len(knownHosts) != 1 {
+			t.Fatalf("Expected 1 host, got %d", len(knownHosts))
+		}
+		t.Fatalf("Expected 192.168.1.1:22 , got %s", knownHosts[0].Hostport)
+	}
+
+	err = s.DeleteHost("192.168.1.1:22")
+	check(err)
+	knownHosts, err = s.GetActiveHosts(7)
+	check(err)
+	if len(knownHosts) != 0 {
+		t.Fatalf("Expected 0 hosts, got %d", len(knownHosts))
+	}
+}

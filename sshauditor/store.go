@@ -400,3 +400,14 @@ func (s *SQLiteStore) GetActiveHosts(maxAgeDays int) ([]Host, error) {
 	err := s.Select(&hostList, query, dayInterval)
 	return hostList, errors.Wrap(err, "GetActiveHosts")
 }
+
+func (s *SQLiteStore) DeleteHost(hostport string) error {
+	s.Begin()
+	defer s.Commit()
+	_, err := s.Exec("DELETE FROM hosts where hostport=$1", hostport)
+	if err != nil {
+		return err
+	}
+	_, err = s.Exec("DELETE FROM host_creds where hostport=$1", hostport)
+	return err
+}

@@ -36,8 +36,24 @@ var hostListCmd = &cobra.Command{
 	},
 }
 
+var hostDeleteCmd = &cobra.Command{
+	Use:     "delete",
+	Aliases: []string{"r"},
+	Short:   "delete hosts",
+	Run: func(cmd *cobra.Command, args []string) {
+		for _, host := range args {
+			err := store.DeleteHost(host)
+			if err != nil {
+				log.Error(err.Error())
+				os.Exit(1)
+			}
+		}
+	},
+}
+
 func init() {
 	RootCmd.AddCommand(hostCmd)
 	hostCmd.AddCommand(hostListCmd)
 	hostListCmd.Flags().IntVar(&hostMaxAgeDays, "max-age-days", 14, "List hosts seen at most this many days ago")
+	hostCmd.AddCommand(hostDeleteCmd)
 }
