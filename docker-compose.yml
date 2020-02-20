@@ -17,7 +17,7 @@ services:
     build: testing/docker/alpine-sshd-test-test-no-id-binary-no-tunnel
   auditor:
     build: .
-    command: ./ssh-auditor version
+    command: go test ./...
     volumes:
       - .:/go/src/github.com/ncsa/ssh-auditor
     depends_on:
