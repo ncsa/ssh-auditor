@@ -10,4 +10,4 @@ RUN chmod 0700 /home/test /home/test/.ssh && \
     chmod 0600 /home/test/.ssh/authorized_keys && \
     chown test:test /home/test/.ssh /home/test/.ssh/authorized_keys
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-De"]
+CMD ["/usr/sbin/sshd", "-D"]
