@@ -14,7 +14,8 @@ builds:
   main: .
   ldflags: -s -w -X github.com/ncsa/ssh-auditor/cmd.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -extldflags "-static"
   binary: ssh-auditor
-archive:
+archives:
+-
   wrap_in_directory: true
   format: tar.gz
   name_template: '{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{
@@ -32,7 +33,8 @@ snapshot:
   name_template: SNAPSHOT-{{ .Commit }}
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
-nfpm:
+nfpms:
+-
   description: scan for weak ssh passwords on your network
   license: University of Illinois/NCSA Open Source License (NCSA)
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
