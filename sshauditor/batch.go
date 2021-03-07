@@ -18,10 +18,9 @@ func batch(ctx context.Context, c chan interface{}, size int, maxInterval time.D
 				if !ok {
 					goto done
 				}
-				if i < size {
-					xs = append(xs, x)
-					i++
-				} else {
+				xs = append(xs, x)
+				i++
+				if i >= size {
 					oc <- xs
 					xs = make([]interface{}, 0, size)
 					i = 0
