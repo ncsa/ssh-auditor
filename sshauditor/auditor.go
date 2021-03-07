@@ -61,8 +61,9 @@ func expandScanConfiguration(cfg ScanConfiguration) (chan string, error) {
 		// Iterate over ports first, so for a large scan there's a
 		// delay between attempts per host
 		for _, port := range cfg.Ports {
+			portString := strconv.Itoa(port)
 			for _, h := range hosts {
-				hostChan <- fmt.Sprintf("%s:%d", h, port)
+				hostChan <- net.JoinHostPort(h, portString)
 			}
 		}
 		close(hostChan)
