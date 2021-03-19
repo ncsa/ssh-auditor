@@ -5,6 +5,9 @@ addons:
     packages:
     # needed for the nfpm pipe:
     - rpm
+go:
+  - "1.15"
+  - "1.16"
 
 services:
   - docker
