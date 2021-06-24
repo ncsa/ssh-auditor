@@ -350,7 +350,7 @@ func (s *SQLiteStore) getScanQueue() ([]ScanRequest, error) {
 		where hosts.hostport = host_creds.hostport and
 		last_tested < datetime('now', 'localtime',  -scan_interval || ' day') and
 		hosts.fingerprint != '' and
-		seen_last > datetime('now', 'localtime', '-7 day') order by last_tested ASC limit 20000`
+		seen_last > datetime('now', 'localtime', '-7 day') order by last_tested ASC`
 	return s.getScanQueueHelper(q)
 }
 func (s *SQLiteStore) getScanQueueSize() (int, error) {
@@ -365,14 +365,28 @@ func (s *SQLiteStore) getScanQueueSize() (int, error) {
 	return cnt, errors.Wrap(err, "getScanQueueSize")
 }
 func (s *SQLiteStore) getRescanQueue() ([]ScanRequest, error) {
-	q := `select * from host_creds where result !='' order by last_tested ASC limit 20000`
+	q := `select * from host_creds where result !='' order by last_tested ASC`
 	return s.getScanQueueHelper(q)
 }
 
 func (s *SQLiteStore) updateBruteResult(br BruteForceResult) error {
+	if br.err != nil {
+		//If this BruteForceResult was an error.. as in, not a positive or
+		//negative result, don't update anything.  We can't say definitively
+		//that the credential does or does not work.
+		return nil
+	}
 	_, err := s.Exec(`UPDATE host_creds set last_tested=datetime('now', 'localtime'), result=$1
 		WHERE hostport=$2 AND user=$3 AND password=$4`,
 		br.result, br.hostport, br.cred.User, br.cred.Password)
+	if err != nil {
+		return errors.Wrap(err, "updateBruteResult")
+	}
+	//Also update the seen_last field on the hosts table, since a non-err
+	//BruteForceResult means the system was reachable.
+	_, err = s.Exec(
+		"UPDATE hosts SET seen_last=datetime('now', 'localtime') WHERE hostport=$1",
+		br.hostport)
 	return errors.Wrap(err, "updateBruteResult")
 }
 

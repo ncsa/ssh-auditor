@@ -56,7 +56,7 @@ from cron every hour to to perform a constant audit.
     $ ./ssh-auditor addcredential admin admin
     $ ./ssh-auditor addcredential guest guest --scan-interval 1 #check this once per day
 
-### Try credentials against discovered hosts in a batch of 20000
+### Try credentials against discovered hosts
 
     $ ./ssh-auditor scan
 
