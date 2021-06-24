@@ -12,6 +12,7 @@ builds:
   goarm:
   - "6"
   main: .
+  flags: -trimpath
   ldflags: -s -w -X github.com/ncsa/ssh-auditor/cmd.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -extldflags "-static"
   binary: ssh-auditor
 archives:
@@ -37,21 +38,12 @@ nfpms:
 -
   description: scan for weak ssh passwords on your network
   license: University of Illinois/NCSA Open Source License (NCSA)
-  name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+  file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
   bindir: /usr/bin
   homepage: https://github.com/ncsa/ssh-auditor
   maintainer: Justin Azoff <jazoff@illinois.edu>
   formats:
     - deb
     - rpm
-sign:
-  cmd: gpg
-  args:
-  - --output
-  - $signature
-  - --detach-sig
-  - $artifact
-  signature: ${artifact}.sig
-  artifacts: none
 env_files:
   github_token: ~/.config/goreleaser/github_token
