@@ -11,5 +11,5 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sebkl/splunk-golang v0.0.0-20151111121930-5ea88f4c7e42
 	github.com/spf13/cobra v0.0.6
-	golang.org/x/crypto v0.0.0-20200219234226-1ad67e1f0ef4
+	golang.org/x/crypto v0.1.0
 )
